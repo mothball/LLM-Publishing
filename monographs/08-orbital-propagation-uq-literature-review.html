@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbital Propagation and Uncertainty Quantification — LLM-Publishing</title>
+<meta name="description" content="Comprehensive review of 2024-2026 advances in orbital propagation and uncertainty quantification, with gap analysis.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <a href="../index.html" class="brand">LLM <em>Publishing</em></a>
+  <nav>
+    <a href="../index.html">Index</a>
+    <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
+  </nav>
+</header>
+
+<header class="mono-header">
+  <div class="eyebrow">Monograph № 08 · 2026-04-01</div>
+  <h1>Orbital Propagation and Uncertainty Quantification</h1>
+  <p class='subtitle'>A 2024–2026 Literature Review</p>
+  <div class="byline">
+    <span>Markdown · ~150 publications, 12 areas</span>
+    <span><span style="color:var(--ink-faint)">PDF: upload pending</span></span>
+  </div>
+</header>
+
+<aside class="reconstruction-notice">
+  <strong>Reconstruction notice.</strong> This page is a summary rebuilt from
+  fragments of the original conversation. It captures the abstract, structure,
+  and key passages but is not the complete monograph. The full source
+  (<code>.tex</code> / <code>.md</code> / <code>.pdf</code>) will replace this
+  scaffold once uploaded to <code>/pdfs/</code>.
+</aside>
+<article class="prose"><h2 id="abstract">Abstract</h2>
+<p>The most promising advances in orbital propagation converge on three themes:
+adaptive-order Taylor integration reaching production maturity, differential
+algebra methods proving their operational viability, and an unexploited gap in
+operator splitting for satellite dynamics. This review spans 12 technical areas
+across ~150 recent publications and identifies several combinations and
+overlooked techniques that could genuinely exceed the state of the art.</p>
+
+<p>The most striking finding is that operator splitting applied to artificial
+satellite dynamics — despite its natural fit to the near-integrable
+Kepler-plus-perturbation structure — remains essentially unexplored, while
+Koopman spectral methods, often assumed niche, have exploded into a 15–20
+paper subfield in the last two years alone.</p>
+<div class="toc"><div class="toc-title">Contents</div><ol><li>Taylor integrators (heyoka, Tan/Smith/Rackauckas adaptive order)</li><li>Modified Chebyshev-Picard Iteration (Junkins, Woollands, Bai)</li><li>Differential Algebra and Jet Transport (Massari, Wittig, Armellin, Di Lizia)</li><li>Koopman operator methods for orbital mechanics</li><li>Operator splitting and exponential integrators (the unexplored gap)</li><li>Neural ODE / differentiable propagators (dSGP4, ThermoNET, ML-∂SGP4)</li><li>Scientific foundation models and their limitations (Vafa et al., Liu et al.)</li><li>Uncertainty propagation beyond Gaussian (GBEES, particle flow, normalizing flows)</li><li>Symplectic and geometric integrators</li><li>GPU-accelerated propagation (jaxsgp4)</li><li>Geometric / Clifford algebra applications</li><li>The Mojo programming language ecosystem for astrodynamics</li></ol></div><h2 id="taylor-integrators-have-crossed-the-operational-threshold">Taylor integrators have crossed the operational threshold</h2>
+<p>The heyoka ecosystem (Biscani &amp; Izzo) has evolved from a research-grade Taylor
+integrator into an operational Earth-orbit propagation framework. As of
+<code>heyoka.py v7.10.1</code>, it supports EGM2008 geopotential, NRLMSISE-00 and
+JB-08 atmospheric models, IAU2000/2006 precession-nutation, Earth Orientation
+Parameters, ICRS/ITRS/TEME frame transformations, and VSOP2013/ELP2000
+ephemerides. The LLVM JIT compilation pipeline exploits AVX-512/Neon SIMD, and
+batch mode processes multiple initial conditions simultaneously with 2–8×
+SIMD speedup. High-order variational equations — computing arbitrary-order flow
+derivatives while exploiting Schwarz symmetries — are built in, and Neural ODE
+support enables embedding learned atmospheric models (ThermoNET) directly in
+the equations of motion.</p>
+
+<p>The February 2026 paper by Tan, Smith, and Rackauckas (arXiv:2602.04086)
+introduces the first comprehensive adaptive time-and-order Taylor algorithm for
+general ODEs. Using Julia's multiple dispatch and TaylorDiff.jl, they generate
+optimized recursive code via symbolic-numeric computing — no user-facing macros
+or code rewriting required, unlike <code>TaylorIntegration.jl</code>'s
+<code>@taylorize</code>.</p>
+<h2 id="proposed-advances-identified">Proposed advances identified</h2>
+<ul>
+<li><strong>Operator splitting for satellite dynamics</strong> as a genuine blind
+spot despite mature mathematical infrastructure from planetary dynamics.</li>
+<li><strong>A semiglobal Chebyshev-in-time × Taylor-in-state polynomial
+propagator</strong> combining MCPI and differential algebra — unrealized despite
+both components being mature.</li>
+<li><strong>Koopman–exponential integrator fusion</strong> as an unexplored combination.</li>
+<li><strong>GBEES on GPU</strong> for full-PDF uncertainty propagation enabling
+real-time non-Gaussian filtering.</li>
+<li><strong>Normalizing flows for orbital uncertainty</strong> as an open frontier
+where the natural geometry (e.g., on the orbital element manifold) has not yet
+been exploited.</li>
+</ul>
+<hr class="ornament"><h2 id="status">Status & provenance</h2>
+<p>Produced in conversation
+<a href="https://claude.ai/chat/09b8bef9-734e-4ae9-9322-f54cabbb3a78">09b8bef9</a>
+on 2026-04-01 via an extended research task across 12 areas. Domain terminology
+indexed: SGP4/dSGP4, EGM2008, NRLMSISE-00/JB-08, TPSA, DACE, MCPI, DA, ADS,
+WH/WHFast/TRACE, GMM, PCE, GBEES, EDMD, CR3BP, NRHO, heyoka.</p>
+</article>
+<footer class="colophon">
+  Reconstructed from past conversation snippets ·
+  <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
+</footer>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false});"></script>
+</body>
+</html>

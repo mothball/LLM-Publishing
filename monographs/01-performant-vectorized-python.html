@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performant Vectorized Python — LLM-Publishing</title>
+<meta name="description" content="A practitioner-level monograph on writing performant vectorized Python — memory model, NumPy internals, SIMD dispatch, parallelism, GPU paths, and wha">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <a href="../index.html" class="brand">LLM <em>Publishing</em></a>
+  <nav>
+    <a href="../index.html">Index</a>
+    <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
+  </nav>
+</header>
+
+<header class="mono-header">
+  <div class="eyebrow">Monograph № 01 · 2026-05-17</div>
+  <h1>Performant Vectorized Python</h1>
+  <p class='subtitle'>A Technical Monograph on Writing Code That Saturates the Hardware</p>
+  <div class="byline">
+    <span>Markdown · Parts I–IX</span>
+    <span><span style="color:var(--ink-faint)">PDF: upload pending</span></span>
+  </div>
+</header>
+
+<aside class="reconstruction-notice">
+  <strong>Reconstruction notice.</strong> This page is a summary rebuilt from
+  fragments of the original conversation. It captures the abstract, structure,
+  and key passages but is not the complete monograph. The full source
+  (<code>.tex</code> / <code>.md</code> / <code>.pdf</code>) will replace this
+  scaffold once uploaded to <code>/pdfs/</code>.
+</aside>
+<article class="prose"><h2 id="abstract">Abstract</h2>
+<p>Targeting CPython 3.13/3.14 and NumPy 2.x. Written for practitioners who already
+know Python and NumPy and want to understand the machine underneath. The thesis,
+threaded through every part: <em>performance work is memory work</em>. A double-precision
+multiply costs a few cycles; a fetch from main memory costs two to three hundred.
+Vectorized code is fast for two reasons that have different failure modes — it
+moves work out of the CPython interpreter, and it gives the compiler something
+the SIMD units can chew through. Treat those separately and the gap between
+typical numerical code and the hardware roofline collapses.</p>
+<div class="toc"><div class="toc-title">Contents</div><ol><li>Part I — The Machine (caches, vector units, the Roofline model)</li><li>Part II — NumPy Internals (<code>ndarray</code> memory, views vs copies, ufunc execution, broadcasting cost)</li><li>Part III — Writing Vectorized Code (<code>ArrayLike</code> + <code>asarray</code>, eliminating temporaries, AoS vs SoA, axis discipline)</li><li>Part IV — Reaching Hardware Performance (NumPy 2.x SIMD dispatch, cache blocking, Numba, dtype as a lever)</li><li>Part V — Parallelism (the GIL, free-threaded Python 3.13/3.14, the threading decision tree)</li><li>Part VI — Measurement (timeit → flame graphs, Roofline analysis, hardware counters)</li><li>Part VII — Beyond the CPU (GPU and accelerator paths; Mojo and the compiled-Python frontier)</li><li>Part VIII — The Frontier (NEP 54 + Google Highway, language changes, the convergence thesis)</li><li>Part IX — Cross-Language Perspective (Python vs C/C++/Java/Julia; a JAX field guide)</li><li>Annotated Bibliography (Drepper, Hennessy &amp; Patterson, Roofline, Agner Fog, Rougier, NumPy NEP 38/54, Gorelick &amp; Ozsvald)</li></ol></div><h2 id="the-mental-model-vectorization-is-really-about-memory">The mental model: vectorization is really about memory</h2>
+<p>The instinct most people carry into performance work is wrong, or at least
+incomplete: they think performance means <em>doing fewer operations</em>. On modern
+hardware, the dominant cost of numerical code is almost never arithmetic. It is
+moving data. The arithmetic units sit idle, starved, waiting for operands.</p>
+
+<p>This reframes everything. "Vectorized" code is fast for two distinct reasons,
+and they are worth separating because they have different failure modes:</p>
+
+<ol>
+<li><strong>It moves work out of the CPython interpreter.</strong> Each Python bytecode
+operation carries enormous overhead: boxed objects, reference counting,
+dynamic dispatch, type checks. A Python-level loop over a million floats
+pays that tax a million times; a NumPy call pays it once and then runs a
+tight C loop.</li>
+<li><strong>It gives the compiler something the SIMD units can chew through.</strong>
+Contiguous arrays in well-known dtypes are exactly what NumPy's inner
+loops — and now its runtime SIMD dispatch via NEP 38/54 — are tuned for.</li>
+</ol>
+<h2 id="api-boundaries-and-dtype-discipline">API boundaries and dtype discipline</h2>
+<p>Accepting <code>ArrayLike</code> at the API boundary and normalizing internally is
+the right pattern:</p>
+
+<pre><code>from numpy.typing import ArrayLike, NDArray
+import numpy as np
+
+def propagate(state: ArrayLike, dt: ArrayLike) -> NDArray[np.float64]:
+    state = np.asarray(state, dtype=np.float64)
+    dt    = np.asarray(dt,    dtype=np.float64)
+    ...</code></pre>
+
+<p>Use <code>np.asarray</code>, not <code>np.array</code> — <code>asarray</code> is a no-op when the input is
+already a contiguous array of the right dtype, so you avoid a spurious copy.
+Pinning <code>dtype</code> explicitly at the boundary prevents silent upcasts to
+<code>float64</code> from an unexpected <code>float32</code> input, or object-dtype disasters
+from a list of Python ints.</p>
+<h2 id="layout-aos-vs-soa-and-the-contiguous-axis">Layout: AoS vs SoA and the contiguous axis</h2>
+<p>Memory layout dominates cache behavior. Structure-of-arrays wins for vectorized
+math because each operation streams contiguous memory. For a batch of state
+vectors, store <code>(6, N)</code> or <code>(N, 6)</code> deliberately. If your hot loop operates
+component-wise across the batch, you want each component contiguous:
+<code>positions[0]</code> should be a stride-1 view. Generally <code>(6, N)</code> with C-order
+gives you that; <code>(N, 6)</code> forces strided access on per-component ops.</p>
+
+<p>Operate along the last axis. NumPy reduction and ufunc inner loops are
+fastest when the contiguous axis is the one being iterated.</p>
+<h2 id="part-viii-the-frontier">Part VIII — the frontier</h2>
+<p><strong>NEP 54</strong> has progressed beyond draft. NumPy has begun using Google Highway
+internally and the roadmap states usage will expand, with SVE work ongoing. The
+crucial point for the user: it's internal re-plumbing with <em>no Python or C API
+changes</em>. You don't act on it; it silently widens free SIMD coverage —
+especially on ARM and future RISC-V. One practical wrinkle: Highway's pragma use
+is poorly supported by MSVC, so building NumPy from source on Windows with
+full SIMD may need <code>clang-cl</code>.</p>
+
+<p><strong>cuTile</strong> is genuinely new (December 2025, CUDA 13.1). Built on Numba plus a
+new compiler stack, draws on Triton, and introduces Tile IR as a virtual ISA.
+Worth prototyping to learn the model; Triton is the safer production pick today.</p>
+
+<p>The §31 thesis: at the single-kernel level there is no meaningful performance
+ceiling separating compiled-Python tools from C. A well-shaped Numba/JAX/Cython
+kernel reaches the same hardware roofline as hand-written <code>-O3 -march=native</code>
+C. The cross-language benchmark literature backs this — Julia and C++ broadly
+comparable, small wins trading by scenario. The gap between typical numerical
+code and the maximum is almost never the language; it's the five fixable things:
+unfused temporaries, wrong layout, strided access, oversized dtype, un-exploited
+parallelism.</p>
+<hr class="ornament"><h2 id="status">Status & provenance</h2>
+<p>Produced in conversation
+<a href="https://claude.ai/chat/71b47249-5fe6-473c-ae99-7ea329bfe075">71b47249</a>
+on 2026-05-17. The original markdown lives at
+<code>/mnt/user-data/outputs/performant-vectorized-python.md</code> in that
+container. Parts VIII–IX were the most time-sensitive — NEP statuses, version
+numbers, and tile DSLs will move; Parts I–IV are durable physics.</p>
+</article>
+<footer class="colophon">
+  Reconstructed from past conversation snippets ·
+  <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
+</footer>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false});"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Mojo-Native Differentiable, GPU-Native Astrodynamics Substrate — LLM-Publishing</title>
+<meta name="description" content="The Mojo-stack roadmap. Layers JAX gets for free must be built — higher cost, greater architectural control.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <a href="../index.html" class="brand">LLM <em>Publishing</em></a>
+  <nav>
+    <a href="../index.html">Index</a>
+    <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
+  </nav>
+</header>
+
+<header class="mono-header">
+  <div class="eyebrow">Monograph № 04 · 2026-05-08</div>
+  <h1>A Mojo-Native Differentiable, GPU-Native Astrodynamics Substrate</h1>
+  <p class='subtitle'>Layered Implementation Roadmap from Compiler Primitives to Operational Propagator</p>
+  <div class="byline">
+    <span>LaTeX → PDF · ~24 pages</span>
+    <span><span style="color:var(--ink-faint)">PDF: upload pending</span></span>
+  </div>
+</header>
+
+<aside class="reconstruction-notice">
+  <strong>Reconstruction notice.</strong> This page is a summary rebuilt from
+  fragments of the original conversation. It captures the abstract, structure,
+  and key passages but is not the complete monograph. The full source
+  (<code>.tex</code> / <code>.md</code> / <code>.pdf</code>) will replace this
+  scaffold once uploaded to <code>/pdfs/</code>.
+</aside>
+<article class="prose"><h2 id="abstract">Abstract</h2>
+<p>This monograph specifies a complete implementation roadmap for a high-fidelity
+differentiable orbit propagator built on the Mojo programming language and the
+broader Modular Platform, structured as a layered architecture from compiler-level
+primitives upward to a production-grade propagator. The structural difference
+from a JAX-equivalent roadmap is significant: where JAX provides production-grade
+automatic differentiation, ODE integration, and ecosystem libraries on day one,
+Mojo as of 2026 requires that several of these layers be built rather than
+imported. This shifts the project shape from "compose existing components" to
+"build the foundations, then compose them," with both a higher engineering burden
+and a higher strategic upside in the form of greater architectural control and a
+publishable contribution to the Mojo ecosystem.</p>
+<h2 id="structural-difference-from-jax">Structural difference from JAX</h2>
+<p>The intended audience is the technical lead who would own this work and is
+willing to absorb the additional foundational effort in exchange for IR-level
+optimization control, AOT deployment, and the language properties that
+distinguish Mojo from Python-based alternatives.</p>
+
+<p>The structure mirrors the parallel JAX-stack roadmap (No. 03); identical
+sections in the two documents address the same engineering problem. The
+comparative read is the point — every layer can be evaluated against its JAX
+analog and decided on the explicit trade.</p>
+<h2 id="what-must-be-built-that-jax-gives-away-free">What must be built that JAX gives away free</h2>
+<ul>
+<li><strong>Forward-mode AD over numerical primitives.</strong> Trait-driven via
+<code>HasPrimal</code>/dual-number lifting; spec'd in detail in companion PRD v12.</li>
+<li><strong>Reverse-mode AD for whole-trajectory adjoints.</strong> Graph IR with
+explicit checkpointing; the heaviest engineering item below the propagator.</li>
+<li><strong>An adaptive ODE integrator family.</strong> RK 8(7), Gauss-Jackson, and
+a symplectic option; built against the GLMSpec abstraction so coefficients
+are derived at compile time, not hand-coded.</li>
+<li><strong>SIMD/GPU kernels for the dynamics RHS.</strong> Mojo's strengths show here;
+this is what makes the foundational work worth it.</li>
+<li><strong>BLAS/LAPACK shim or replacement.</strong> Decision point — wrap existing
+C libraries via FFI, or write tile-based kernels in Mojo. The roadmap argues
+for hybrid: wrap for linear algebra in the optimizer outer loop, native
+kernels for the dynamics inner loop.</li>
+</ul>
+<h2 id="strategic-case">Strategic case</h2>
+<p>The compounding upside: each foundational layer built is a publishable artifact
+in a young ecosystem. A Mojo-native SOFA reimplementation, a Mojo orbit
+propagator with SIMD/GPU benchmarks, a Mojo AD-enabled GLMSpec integrator
+family — each lands in a domain where no comparable reference exists. The JAX
+roadmap delivers operational capability; the Mojo roadmap delivers operational
+capability <em>plus</em> three to five papers and a position in the ecosystem.</p>
+<hr class="ornament"><h2 id="status">Status & provenance</h2>
+<p>Third of three monographs from conversation
+<a href="https://claude.ai/chat/2308b2c5-71af-4699-b330-b1624b01eef5">2308b2c5</a>
+on 2026-05-08. Read in sequence with Nos. 02 (the technical case) and 03 (the
+JAX-stack roadmap). The PRD v12 (No. 09) provides the architectural foundation
+this roadmap assumes.</p>
+</article>
+<footer class="colophon">
+  Reconstructed from past conversation snippets ·
+  <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
+</footer>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false});"></script>
+</body>
+</html>

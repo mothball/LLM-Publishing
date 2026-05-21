@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hybrid Architecture PRD: Trait-Driven Scientific Computing System — LLM-Publishing</title>
+<meta name="description" content="Product requirements for a multi-paradigm scientific computing system in Mojo, unifying algebraic types, AD, integrators, and backends.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <a href="../index.html" class="brand">LLM <em>Publishing</em></a>
+  <nav>
+    <a href="../index.html">Index</a>
+    <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
+  </nav>
+</header>
+
+<header class="mono-header">
+  <div class="eyebrow">Monograph № 09 · 2026-03-20</div>
+  <h1>Hybrid Architecture PRD: Trait-Driven Scientific Computing System</h1>
+  <p class='subtitle'>Version 12 — Static Specialization as Primary, Graph IR for Dynamic Concerns</p>
+  <div class="byline">
+    <span>Markdown · ~17,300 words; 2,235 lines; 20 sections + 9 appendices</span>
+    <span><span style="color:var(--ink-faint)">PDF: upload pending</span></span>
+  </div>
+</header>
+
+<aside class="reconstruction-notice">
+  <strong>Reconstruction notice.</strong> This page is a summary rebuilt from
+  fragments of the original conversation. It captures the abstract, structure,
+  and key passages but is not the complete monograph. The full source
+  (<code>.tex</code> / <code>.md</code> / <code>.pdf</code>) will replace this
+  scaffold once uploaded to <code>/pdfs/</code>.
+</aside>
+<article class="prose"><h2 id="abstract">Abstract</h2>
+<p>This document specifies a multi-paradigm scientific computing system built in
+Mojo. The system unifies algebraic number types (Clifford, exterior, dual, jet,
+quaternion, and others), automatic differentiation, numerical integrators, and
+backend execution under a single coherent architecture. The core architectural
+thesis is:</p>
+
+<p style="text-align:center;font-style:italic">Traits + AlgebraSpec + Comptime Specialization + Graph for Dynamic Concerns</p>
+
+<p>This is a trait-driven, statically-specialized system. The primary execution
+path generates specialized kernels at compile time from method specifications
+and algebra specifications. A runtime graph IR exists only for dynamic
+orchestration and reverse-mode AD.</p>
+<div class="toc"><div class="toc-title">Contents</div><ol><li>Vision &amp; scope</li><li>Mathematical foundations</li><li>Trait layer specification (the center of gravity)</li><li>Algebra specs &amp; generated types</li><li>Compilation model: static / planned / dynamic three-tier execution</li><li>Compile-time IR &amp; optimization passes</li><li>Runtime graph: scope &amp; boundaries (explicitly narrowed)</li><li>AD architecture: forward algebraic + reverse graph</li><li>Backend &amp; storage</li><li>Validation stack (property tests, Lean export, Mathlib4 alignment)</li><li>Implementation roadmap (16 milestones)</li><li>Appendix A — Code examples and benchmarks</li><li>Appendix B — Mojo alignment notes</li><li>(plus seven more appendices)</li></ol></div><h2 id="the-architectural-resolution">The architectural resolution</h2>
+<p>The PRD resolves a long-running debate between a graph-IR-first approach and a
+comptime-first approach in favor of a three-tier model (static / planned /
+dynamic). Key structural decisions:</p>
+<ul>
+<li><strong>GLMSpec with coefficient matrices (A, U, B, V) as the unifying
+integrator abstraction</strong> — subsumes RK, BDF, multistep, and peer methods.</li>
+<li><strong>A domain-specific CAS built from the same AlgebraSpec building blocks</strong>
+feeding a CAS → Lean → comptime verified pipeline.</li>
+<li><strong>Algebraic lifting as a general enrichment mechanism</strong> covering AD,
+covariance propagation, polynomial chaos, and interval validation.</li>
+<li><strong>Comptime-generated orthogonal polynomial families</strong> (Hermite,
+Legendre, Laguerre, Chebyshev, Jacobi) enabling PCESpec as a legitimate
+AlgebraSpec for uncertainty quantification.</li>
+</ul>
+<h2 id="scoping-decisions">Scoping decisions</h2>
+<ul>
+<li>Orbit-type-aware propagation and polynomial event detection belong in
+<em>consumer packages</em>, not the core library.</li>
+<li>The CAS should be <em>narrow and focused</em> — exact rational arithmetic,
+spec-derived rewriting, GLM coefficient derivation, Lean export — not a
+general-purpose CAS.</li>
+<li>PDE support is a consumer layer built on top of the core.</li>
+<li>The library is positioned as a <em>backbone for astrodynamics tools</em>
+(STK / GMAT / Orekit / heyoka successors) and high-fidelity scientific
+simulation, not for real-time physics engines like NVIDIA Newton.</li>
+</ul>
+<h2 id="reference-implementations-studied">Reference implementations studied</h2>
+<p>DifferentialEquations.jl (problem/algorithm separation, sensitivity-analysis
+crossover point), JAX/XLA (staging artifact model,
+<code>static_argnums</code>), Diffrax (adaptive stepping vs tracing tension),
+Enzyme (reverse-mode performance ceiling), DiGeo
+(<code>HasCustomAdjoint</code> pattern for non-smooth discrete operations;
+parallel transport as geodesic byproduct), TaylorIntegration.jl (jet
+coefficient propagation), Mathlib4 (Lean proof foundation).</p>
+
+<p>The trait hierarchy includes a <code>HasCustomAdjoint</code> trait covering
+DiGeo-style proxy gradients for discrete geometric operations, implicit
+function theorem adjoints for nonlinear solves, continuous adjoint methods for
+ODE trajectory sensitivity, and any future operation where automatic AD is
+insufficient.</p>
+<hr class="ornament"><h2 id="status">Status & provenance</h2>
+<p>Twelfth iteration; the v11 hybrid PRD ran 6,900 lines as "geological strata"
+that mixed graph-first and comptime-first framings. v12 is the rewrite around
+the hybrid architecture as primary. Produced in conversation
+<a href="https://claude.ai/chat/73f1973e-ca55-443d-b04f-a07967743ba3">73f1973e</a>
+on 2026-03-20. Companion to the JAX and Mojo roadmap monographs (Nos. 03 and 04)
+which assume this architectural foundation.</p>
+</article>
+<footer class="colophon">
+  Reconstructed from past conversation snippets ·
+  <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
+</footer>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false});"></script>
+</body>
+</html>

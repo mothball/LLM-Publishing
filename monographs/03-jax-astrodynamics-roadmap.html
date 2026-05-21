@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A JAX-Native Differentiable, GPU-Native Astrodynamics Substrate — LLM-Publishing</title>
+<meta name="description" content="A JAX-stack implementation roadmap. Ten layers, each a coherent deliverable with explicit acceptance criteria.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <a href="../index.html" class="brand">LLM <em>Publishing</em></a>
+  <nav>
+    <a href="../index.html">Index</a>
+    <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
+  </nav>
+</header>
+
+<header class="mono-header">
+  <div class="eyebrow">Monograph № 03 · 2026-05-08</div>
+  <h1>A JAX-Native Differentiable, GPU-Native Astrodynamics Substrate</h1>
+  <p class='subtitle'>Layered Implementation Roadmap from Primitives to Operational Propagator</p>
+  <div class="byline">
+    <span>LaTeX → PDF · ~21 pages</span>
+    <span><span style="color:var(--ink-faint)">PDF: upload pending</span></span>
+  </div>
+</header>
+
+<aside class="reconstruction-notice">
+  <strong>Reconstruction notice.</strong> This page is a summary rebuilt from
+  fragments of the original conversation. It captures the abstract, structure,
+  and key passages but is not the complete monograph. The full source
+  (<code>.tex</code> / <code>.md</code> / <code>.pdf</code>) will replace this
+  scaffold once uploaded to <code>/pdfs/</code>.
+</aside>
+<article class="prose"><h2 id="abstract">Abstract</h2>
+<p>This monograph specifies a complete implementation roadmap for a high-fidelity
+differentiable orbit propagator built on the JAX scientific computing stack,
+structured as a layered architecture from the lowest computational primitives
+upward to a production-grade propagator with full force-model fidelity,
+end-to-end automatic differentiation, GPU-batched parallelism, and operational
+interoperability.</p>
+
+<p>Each layer is treated as a self-contained engineering deliverable with explicit
+acceptance criteria, validation procedures, dependencies on lower layers, and
+potential off-ramps. The intended audience is the technical team that would
+actually implement this work; the document serves both as a planning artifact
+for resource allocation and as a reference architecture for the implementation
+phase. The structure mirrors an analogous Mojo-based roadmap (No. 04) for
+direct comparison; identical sections in the two documents address the same
+engineering problem in their respective stacks.</p>
+<h2 id="architectural-premise">Architectural premise</h2>
+<p>The substrate is structured as ten layers, each a coherent engineering
+deliverable with its own acceptance criteria. Below each section heading the
+roadmap states (1) what is built, (2) what it depends on from below, (3) what
+exists in the JAX ecosystem that can be borrowed, (4) where the engineering
+risk concentrates, and (5) the off-ramp if the layer cannot be made to work as
+specified.</p>
+
+<p>The structural advantage of the JAX stack is that several layers — automatic
+differentiation, batched compilation via <code>vmap</code> and <code>jit</code>, ODE
+integration via Diffrax, the optimizer ecosystem in Optax — exist in
+production-grade form on day one. The shape of the project is "compose
+existing components with carefully-specified glue," not "build the
+foundations."</p>
+<h2 id="what-s-borrowed-from-the-ecosystem">What's borrowed from the ecosystem</h2>
+<ul>
+<li><strong>JAX core</strong> — tracing, JIT, autograd primitives.</li>
+<li><strong>Diffrax</strong> — adaptive RK methods, implicit solvers, dense output,
+event detection.</li>
+<li><strong>Optax</strong> — gradient-based optimizers for downstream tasking and
+maneuver-planning loops.</li>
+<li><strong>jaxsgp4</strong> — reference batched SGP4 for parity checks against
+operational TLE-driven tooling.</li>
+<li><strong>brandeis-orbit / heyoka.py</strong> — reference high-fidelity propagators
+to anchor against during validation.</li>
+</ul>
+<h2 id="risk-concentrations">Risk concentrations</h2>
+<p>The roadmap calls out three layers where JAX-specific friction is unavoidable:</p>
+<ol>
+<li><strong>Adaptive stepping under tracing.</strong> Diffrax already
+solves most of this, but custom solvers (e.g., a Gauss-Jackson port) re-open
+the design tension.</li>
+<li><strong>Force-model fidelity vs. compile time.</strong> EGM2008 to high degree
+inside a <code>jit</code> trace produces enormous compute graphs; staging strategies
+(<code>static_argnums</code>, sharded force decomposition) are required.</li>
+<li><strong>Reverse-mode through long integrations.</strong> Memory pressure on the
+backward pass; the roadmap specifies optimal checkpointing thresholds.</li>
+</ol>
+<hr class="ornament"><h2 id="status">Status & provenance</h2>
+<p>Companion to Nos. 02 and 04. Written immediately after the SPEPH monograph
+in conversation
+<a href="https://claude.ai/chat/2308b2c5-71af-4699-b330-b1624b01eef5">2308b2c5</a>.
+The Mojo equivalent (No. 04) is structurally parallel — identical section
+numbering, different stack.</p>
+</article>
+<footer class="colophon">
+  Reconstructed from past conversation snippets ·
+  <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
+</footer>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false});"></script>
+</body>
+</html>

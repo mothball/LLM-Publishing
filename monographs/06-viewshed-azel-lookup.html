@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Precomputed Azimuth–Elevation Horizon Masks for Satellite Visibility over Terrain — LLM-Publishing</title>
+<meta name="description" content="Methodology for constructing a lookup table mapping a geodetic query point to its terrain-induced az-el mask, with provable error bounds.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <a href="../index.html" class="brand">LLM <em>Publishing</em></a>
+  <nav>
+    <a href="../index.html">Index</a>
+    <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
+  </nav>
+</header>
+
+<header class="mono-header">
+  <div class="eyebrow">Monograph № 06 · 2026-04-23</div>
+  <h1>Precomputed Azimuth–Elevation Horizon Masks for Satellite Visibility over Terrain</h1>
+  <p class='subtitle'>A Spatial-Coherence-Exploiting Lookup Structure</p>
+  <div class="byline">
+    <span>LaTeX → PDF · ~23 pages, 557 KB</span>
+    <span><span style="color:var(--ink-faint)">PDF: upload pending</span></span>
+  </div>
+</header>
+
+<aside class="reconstruction-notice">
+  <strong>Reconstruction notice.</strong> This page is a summary rebuilt from
+  fragments of the original conversation. It captures the abstract, structure,
+  and key passages but is not the complete monograph. The full source
+  (<code>.tex</code> / <code>.md</code> / <code>.pdf</code>) will replace this
+  scaffold once uploaded to <code>/pdfs/</code>.
+</aside>
+<article class="prose"><h2 id="abstract">Abstract</h2>
+<p>We present a complete methodology for constructing a lookup table that maps a
+geodetic query point $(\lambda, \phi)$ to the terrain-induced azimuth–elevation
+mask governing satellite visibility from that location. The mask
+$\mathcal{H}_{\lambda\phi}: S^1 \to [-\tfrac{\pi}{2}, \tfrac{\pi}{2}]$
+encodes, for every azimuth $\varphi$, the minimum elevation above which the sky
+is unobstructed by terrain. A satellite at topocentric direction
+$(\varphi^*, \eta^*)$ is visible iff $\eta^* > \mathcal{H}_{\lambda\phi}(\varphi^*)$.</p>
+
+<p>Naïve per-query computation on a DEM of $n$ cells costs $\Theta(n^{1.5})$ per
+point, $\Theta(n^{2.5})$ for the all-cells horizon. We review the classical R2,
+R3, and XDraw viewshed algorithms, Stewart's $O(n \log n)$ all-points horizon
+algorithm, and the sDEM / band-of-sight data relocation technique of Tabik et al.,
+then build a lookup structure that exploits the strong spatial coherence of
+horizons between nearby observers.</p>
+
+<p>The central observation is a <em>far/near decomposition</em>: the horizon at a
+point $\boldsymbol{p}$ is the pointwise maximum of a <em>far</em> component,
+governed by distant terrain and nearly constant over tiles of diameter
+$\ll R_{\max}$, and a <em>near</em> component, which varies rapidly but can be
+computed on demand from a small local window. Combined with low-rank (PCA)
+per-tile residuals and piecewise-linear azimuthal encoding, total storage drops
+1–2 orders of magnitude relative to naïve per-cell storage, with bounded error
+characterised in closed form.</p>
+<div class="toc"><div class="toc-title">Contents</div><ol><li>Introduction and problem statement</li><li>Geometric preliminaries: ECI→ECEF→ENU, WGS-84, the $k_{\text{ref}}$-Earth-radius model</li><li>Classical viewshed algorithms: R2, R3, XDraw, complexities</li><li>Total-horizon computation: Stewart's backward sweep, Tabik sDEM / band-of-sight</li><li>Spatial coherence analysis: the far/near decomposition theorem with Lipschitz bound</li><li>Lookup structure: hierarchical tiles, three compression axes, query algorithm with error bound</li><li>Satellite ECI → topocentric azimuth-elevation pipeline</li><li>Refraction and curvature corrections for VHF–Ka radio and optical sensing</li></ol></div><h2 id="problem-statement">Problem statement</h2>
+<p>Given a digital elevation model $\mathcal{T}: \mathcal{D} \to \mathbb{R}$
+on a bounded geographic domain $\mathcal{D}$ with cell size $\Delta$ and a
+maximum sensing range $R_{\max}$, construct a data structure $\mathcal{M}$
+supporting queries</p>
+<p>$$\mathcal{M}(\lambda, \phi) \longmapsto \widehat{\mathcal{H}}_{\lambda\phi}(\cdot),
+\qquad \widehat{\mathcal{H}}_{\lambda\phi}: S^1 \to \mathbb{R},$$</p>
+<p>such that
+$\|\widehat{\mathcal{H}}_{\lambda\phi} - \mathcal{H}_{\lambda\phi}\|_\infty \le \varepsilon_{\text{tol}}$
+for every $(\lambda,\phi) \in \mathcal{D}$, using as little storage and query
+time as possible.</p>
+<h2 id="contributions">Contributions</h2>
+<ul>
+<li>A uniform mathematical formulation admitting curvature and refraction in
+closed form, relating the az-el mask to the classical viewshed.</li>
+<li>A consolidated exposition of R2, R3, XDraw, Stewart's sweep, and Tabik's
+sDEM with precise complexities on a common grid model.</li>
+<li>A quantitative analysis of spatial coherence yielding a rigorous far/near
+decomposition theorem (Theorem 5.1) with explicit Lipschitz bound
+$|\Delta\mathcal{H}^{\text{far}}| \le \delta(1+M)/R_n + \text{curvature term}$.</li>
+<li>A lookup structure built from hierarchical tiles carrying compressed
+far-horizons plus lazy near-horizon evaluation, with provable error bounds.</li>
+<li>End-to-end specification for converting orbital state to az-el and querying
+the mask, including refraction and curvature corrections appropriate for
+VHF–Ka radio and optical sensing.</li>
+</ul>
+<h2 id="the-gap-this-fills">The gap this fills</h2>
+<p>The viewshed literature divides into (i) single-observer viewshed algorithms
+(R2/R3 of Franklin &amp; Ray, XDraw of Wang et al.), (ii) all-points total-viewshed /
+horizon-map algorithms (Stewart, De Floriani &amp; Magillo, Tabik et al.,
+Sanchez-Fernandez et al.), and (iii) GPU / I/O-efficient implementations
+(Cauchi-Saunders &amp; Lewis, Fishman et al., Qarah). The satellite-specific
+specialisation appears in mission-analysis tools — AGI STK's <code>AzElMask</code> /
+<code>TerrainMask</code> constraints, MATLAB's Satellite Communications Toolbox
+visibility-mask workflow, ground-station design literature. Solar-resource and
+shading work is structurally the same problem. <em>None of these, to the author's
+knowledge, addresses the offline construction of a compressed
+$(\lambda,\phi) \mapsto \mathcal{H}$ lookup using formal far/near
+decomposition with closed-form error bounds.</em> That is the gap.</p>
+<hr class="ornament"><h2 id="status">Status & provenance</h2>
+<p>Produced in conversation
+<a href="https://claude.ai/chat/19824ab5-fc9e-454c-82b3-8f7dae029bdb">19824ab5</a>
+on 2026-04-23 alongside the broader viewshed-compute Python package. Compiled
+cleanly (0 errors) after working through several macro-conflict issues during
+the run — accidental backspace bytes from <code>\b*</code> macros and a few
+<code>\Rearth</code>/<code>\Return</code> collisions.</p>
+</article>
+<footer class="colophon">
+  Reconstructed from past conversation snippets ·
+  <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
+</footer>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false});"></script>
+</body>
+</html>

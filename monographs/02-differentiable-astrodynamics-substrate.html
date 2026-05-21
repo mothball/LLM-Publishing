@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Differentiable, GPU-Native Astrodynamics Substrate — LLM-Publishing</title>
+<meta name="description" content="Operational SDA rests on propagators whose architecture was locked in two decades ago. End-to-end differentiability and GPU-native batching break the ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <a href="../index.html" class="brand">LLM <em>Publishing</em></a>
+  <nav>
+    <a href="../index.html">Index</a>
+    <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
+  </nav>
+</header>
+
+<header class="mono-header">
+  <div class="eyebrow">Monograph № 02 · 2026-05-08</div>
+  <h1>A Differentiable, GPU-Native Astrodynamics Substrate</h1>
+  <p class='subtitle'>A Technical Case for Operational and Strategic Investment</p>
+  <div class="byline">
+    <span>LaTeX → PDF · Technical case</span>
+    <span><span style="color:var(--ink-faint)">PDF: upload pending</span></span>
+  </div>
+</header>
+
+<aside class="reconstruction-notice">
+  <strong>Reconstruction notice.</strong> This page is a summary rebuilt from
+  fragments of the original conversation. It captures the abstract, structure,
+  and key passages but is not the complete monograph. The full source
+  (<code>.tex</code> / <code>.md</code> / <code>.pdf</code>) will replace this
+  scaffold once uploaded to <code>/pdfs/</code>.
+</aside>
+<article class="prose"><h2 id="abstract">Abstract</h2>
+<p>Operational space domain awareness (SDA) and satellite fleet management both
+rest on numerical orbit propagators whose architectural choices were locked in
+two decades ago: hand-derived analytic partial derivatives, CPU-bound integration,
+and force-model cards configured per-run with no gradient information available
+downstream. The U.S. Space Force's Special Perturbations Ephemeris (SPEPH)
+propagator is the operational reference and an excellent example of this
+architecture; it is also a structural ceiling on what every downstream tool
+built on top of it can do.</p>
+
+<p>This monograph proposes — and makes the operational and strategic case for —
+a differentiable, GPU-native astrodynamics substrate that replaces hand-derived
+partials with automatic differentiation, replaces single-trajectory CPU integration
+with batched GPU propagation, and makes the entire stack (propagator, conjunction
+calculator, scheduler) end-to-end differentiable from action to consequence.</p>
+<h2 id="why-the-current-architecture-is-a-ceiling">Why the current architecture is a ceiling</h2>
+<p>SPEPH is described in current open documentation as a variable-step Runge-Kutta
+of the RK 7(8)/RK 8(9) Fehlberg-Dormand-Prince family with high-fidelity force
+models (EGM-96, IAU-1976/1980 precession-nutation, JPL DE430 third-body,
+Jacchia-Roberts drag, spherical SRP). The legacy AFSPC code used Gauss-Jackson
+8th-order predictor-corrector with an RK starter.</p>
+
+<p>None of that is wrong. What it is, is closed. STMs and partials are hand-derived
+per force model; the propagator is a black box to anything downstream that wants
+a gradient with respect to a maneuver, a sensor cue, or a schedule decision.
+"What ΔV minimizes fuel and preserves the schedule and keeps Pc below threshold"
+becomes grid search — running the chain forward many times with different
+candidates — with all of grid search's limitations.</p>
+<h2 id="the-deep-learning-analogy">The deep-learning analogy</h2>
+<p>End-to-end differentiability is why deep learning works. A modern neural network
+is a stack of layers — convolutions, attention, normalizations, classification
+heads — and the entire stack is differentiable. That is the only reason
+gradient descent can train it. If any layer were a black box, training would
+be impossible and the field would not exist.</p>
+
+<p>The proposal, in one sentence: <em>bring the same architectural property to the
+operational SDA and fleet-management stack.</em> The propagator becomes the bottom
+layer of a learning system; the consequences (schedule revenue, fuel consumption,
+conjunction probability, customer SLA) become the loss function; the actions
+(maneuver ΔV's, tasking schedules, sensor cues) become the parameters. The
+gradient-based optimization that trains transformers becomes the gradient-based
+optimization that plans maneuvers.</p>
+<h2 id="what-end-to-end-differentiability-enables">What end-to-end differentiability enables</h2>
+<p>Three concrete capabilities require the chain to be unbroken end-to-end, not
+just locally differentiable in pieces:</p>
+<ul>
+<li><strong>Joint optimization across stack layers.</strong> Computing
+$\partial\text{revenue}/\partial \Delta V$ requires the gradient to flow
+from the scheduler, through the propagator, through the dynamics, back to the
+maneuver decision. Any broken link forces the optimization to decompose into
+separately-optimized pieces and the joint optimum is provably unattainable.</li>
+<li><strong>Adjoint data assimilation.</strong> Whole-trajectory sensitivity
+without finite differences.</li>
+<li><strong>Taylor map diffusion for conjunction Pc.</strong> Three orders of
+magnitude faster than Monte Carlo on the same ground truth, with gradients
+included.</li>
+</ul>
+<h2 id="demo-recommendation">Demo recommendation</h2>
+<p>Pick one feature and benchmark it against operational tooling, end-to-end, on a
+real or representative case. The two highest-impact candidates:</p>
+<ul>
+<li><strong>(a)</strong> The GA-vs-AD-gradient comparison on a realistic RPO trajectory
+design — same RHS, same hardware, wall-clock and convergence curves side by
+side. Most viscerally compelling for a technical audience; the speedup is
+huge and the comparison is direct.</li>
+<li><strong>(b)</strong> Taylor Map Diffusion vs. Monte Carlo Pc on a conjunction case
+from your CDM archive. Same MC ground truth, three orders of magnitude
+speedup, gradients for free. Most operationally compelling because it
+touches conjunction analysis directly.</li>
+</ul>
+<p>The feature list is what you put in the deck. The benchmark is what closes the room.</p>
+<hr class="ornament"><h2 id="status">Status & provenance</h2>
+<p>Compiled from conversation
+<a href="https://claude.ai/chat/2308b2c5-71af-4699-b330-b1624b01eef5">2308b2c5</a>
+on 2026-05-08, alongside the JAX and Mojo roadmap monographs (Nos. 03 and 04).
+Originally requested as: <em>"Summarize this entire conversation as a LaTeX
+monograph that is self-contained, technical and thorough. Render it as a PDF."</em></p>
+</article>
+<footer class="colophon">
+  Reconstructed from past conversation snippets ·
+  <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
+</footer>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false});"></script>
+</body>
+</html>

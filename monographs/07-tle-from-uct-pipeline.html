@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>From Uncorrelated Tracks to TLEs — LLM-Publishing</title>
+<meta name="description" content="End-to-end mathematical treatment from UCT observations through TLE packaging, with provider-specific implementation details.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <a href="../index.html" class="brand">LLM <em>Publishing</em></a>
+  <nav>
+    <a href="../index.html">Index</a>
+    <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
+  </nav>
+</header>
+
+<header class="mono-header">
+  <div class="eyebrow">Monograph № 07 · 2026-04-09</div>
+  <h1>From Uncorrelated Tracks to TLEs</h1>
+  <p class='subtitle'>A Comprehensive Mathematical Pipeline with Provider-Specific Implementations</p>
+  <div class="byline">
+    <span>LaTeX → PDF · ~41 pages, AMS style</span>
+    <span><span style="color:var(--ink-faint)">PDF: upload pending</span></span>
+  </div>
+</header>
+
+<aside class="reconstruction-notice">
+  <strong>Reconstruction notice.</strong> This page is a summary rebuilt from
+  fragments of the original conversation. It captures the abstract, structure,
+  and key passages but is not the complete monograph. The full source
+  (<code>.tex</code> / <code>.md</code> / <code>.pdf</code>) will replace this
+  scaffold once uploaded to <code>/pdfs/</code>.
+</aside>
+<article class="prose"><h2 id="abstract">Abstract</h2>
+<p>A complete, derivation-first treatment of the mathematical pipeline that turns
+uncorrelated observation tracks into the Two-Line Element sets that operational
+SDA systems publish. Every equation is derived or stated with full variable
+definitions; no step is skipped. The companion ambition is to document, in
+exhaustive detail, how the four major commercial and government SDA providers
+actually implement this pipeline in practice: the 18th Space Defense Squadron
+(formerly 18 SPCS), LeoLabs, Slingshot Aerospace, and ExoAnalytic Solutions.</p>
+<div class="toc"><div class="toc-title">Contents</div><ol><li>Part I — Mathematical Foundations: time systems, reference frames, two-body mechanics</li><li>Part II — The Pipeline: track correlation, admissible region theory</li><li>Initial Orbit Determination: Laplace, Gauss, Gooding, Lambert (Battin/Gooding/Izzo), Herrick–Gibbs</li><li>Batch Weighted Least Squares: full Jacobian derivations</li><li>Sequential filtering: EKF, UKF, square-root variants</li><li>SGP4 / SDP4: complete algorithm with all constants</li><li>The Vallado–Crawford–Hujsak–Kelso TLE-fit procedure</li><li>TLE format and checksum mechanics</li><li>Uncertainty quantification end-to-end</li><li>Part III — Provider Implementations: 18 SDS</li><li>LeoLabs</li><li>Slingshot Aerospace</li><li>ExoAnalytic Solutions</li><li>Part IV — Comparative Analysis and Open Problems</li><li>Comprehensive bibliography</li></ol></div><h2 id="scope-and-approach">Scope and approach</h2>
+<p>Full pipeline; AMS article style; all available sources, including open
+literature (AMOS/AAS/AIAA papers, patents, SBIR abstracts, press),
+government documents where available (SDA, SSC TTPs, JFSCC, CSpOC SOPs), and
+direct vendor materials.</p>
+
+<p>The construction is uncompromising on derivations. Where conventional
+treatments collapse "differentiate and solve" into a sentence, this monograph
+expands to the explicit Jacobian — partials of range, range-rate, and angles
+with respect to the six-element state — and tracks every approximation
+introduced along the way.</p>
+<h2 id="initial-orbit-determination-complete">Initial Orbit Determination, complete</h2>
+<p>Laplace, Gauss, Gooding, Lambert (via Battin's universal-variable formulation,
+Gooding's iterative scheme, and Izzo's elegant rewrite), and Herrick–Gibbs are
+each derived from first principles, with worked numerical examples and
+discussion of which method to use under which observation geometry. The
+admissible region machinery — Tommei, Milani, Rossi — is presented in its
+modern form, including the connection to attributable orbit determination.</p>
+<h2 id="sgp4-and-the-tle-fit">SGP4 and the TLE fit</h2>
+<p>The complete SGP4/SDP4 algorithm is reproduced with all constants — the WGS72
+choice (not WGS84, despite the name of the latter being more familiar) is
+non-negotiable for parity with operational systems. The Vallado–Crawford–Hujsak–Kelso
+fit procedure converts a high-fidelity ephemeris back into a TLE by iteratively
+adjusting the mean elements so the SGP4 ephemeris matches the truth ephemeris
+in least-squares sense over the fit span.</p>
+
+<p>The checksum mechanics (the last digit of each TLE line) are reproduced with
+the modulo-10 algorithm.</p>
+<h2 id="provider-deep-dives">Provider deep-dives</h2>
+<p>For each of 18 SDS, LeoLabs, Slingshot, and ExoAnalytic: the architecture as it
+can be reconstructed from open materials, the sensor mix that feeds the
+pipeline, the filtering and IOD choices that distinguish them, the public-facing
+products (UCT catalogs, conjunction screening services, SSA-as-a-service APIs),
+and what is provably <em>not</em> in the open record. The intent is not to
+out the providers but to map the design space against the math in Parts I–II.</p>
+<hr class="ornament"><h2 id="status">Status & provenance</h2>
+<p>Final LaTeX is ~2800 lines; PDF is 41 pages. Produced in conversation
+<a href="https://claude.ai/chat/1349ca6e-2eee-4531-9d4d-78444e05057a">1349ca6e</a>
+on 2026-04-09 after a research phase across 150+ publications. Required three
+<code>pdflatex</code> passes for full cross-reference resolution;
+<code>xcolor</code> with <code>[dvipsnames]</code> must precede <code>hyperref</code>
+to support mixed color specifications; stacked math accents
+(<code>\dot{\hat{\boldsymbol{L}}}</code>) need helper macros to dodge
+<code>\macc@adjust</code> errors.</p>
+</article>
+<footer class="colophon">
+  Reconstructed from past conversation snippets ·
+  <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
+</footer>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false});"></script>
+</body>
+</html>

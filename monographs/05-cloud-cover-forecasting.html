@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Total Cloud Cover Forecasting for EO Tasking — LLM-Publishing</title>
+<meta name="description" content="ML weather forecasting for total cloud cover prediction, evaluated for satellite tasking applications.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <a href="../index.html" class="brand">LLM <em>Publishing</em></a>
+  <nav>
+    <a href="../index.html">Index</a>
+    <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
+  </nav>
+</header>
+
+<header class="mono-header">
+  <div class="eyebrow">Monograph № 05 · 2026-05-07</div>
+  <h1>Total Cloud Cover Forecasting for EO Tasking</h1>
+  <p class='subtitle'>ML Weather Models from Keisler-2022 to GenCast, with a Differentiable-Pipeline Lens</p>
+  <div class="byline">
+    <span>LaTeX → PDF · ~40–50 pages</span>
+    <span><span style="color:var(--ink-faint)">PDF: upload pending</span></span>
+  </div>
+</header>
+
+<aside class="reconstruction-notice">
+  <strong>Reconstruction notice.</strong> This page is a summary rebuilt from
+  fragments of the original conversation. It captures the abstract, structure,
+  and key passages but is not the complete monograph. The full source
+  (<code>.tex</code> / <code>.md</code> / <code>.pdf</code>) will replace this
+  scaffold once uploaded to <code>/pdfs/</code>.
+</aside>
+<article class="prose"><h2 id="abstract">Abstract</h2>
+<p>Cloud cover is not a normal weather variable. It is bounded $[0,1]$, strongly
+bimodal (lots of 0s and 1s), spatially intermittent, and — critically — a
+<em>diagnostic</em> in IFS rather than a prognostic state. ERA5's <code>tcc</code> is
+itself a model output derived from cloud water/ice plus saturation, so any
+model trained on it learns to mimic the IFS parameterization rather than ground
+truth. Naïve MSE collapses toward 50% gray mush. The right architectural choices
+— logit transform or beta head, CSI/Brier/HSS validation at operational
+thresholds, calibration against geostationary truth — fall out of taking that
+constraint seriously.</p>
+
+<p>This monograph surveys the ML-weather landscape as of early 2026, with a focus
+on what is actually useful for Earth-observation collection tasking on
+constrained hardware.</p>
+<div class="toc"><div class="toc-title">Contents</div><ol><li>Introduction and the cloud-cover-is-not-weather framing</li><li>Where the field actually is: Keisler, GraphCast, AIFS, GenCast, Aurora, NeuralGCM</li><li>Probabilistic vs deterministic for EO tasking</li><li>Hardware and Compute Tiers (Tier 1 consumer through Tier 4 research clusters)</li><li>Operational stack: multi-source fusion by lead time</li><li>Calibration against observation truth vs reanalysis</li><li>Local inference vs operational center inference</li><li>The ∂LITE pattern: differentiable orbit ∘ geometry ∘ atmosphere</li><li>TCC nowcasting: an open opportunity</li><li>Notebook walk-through: ECMWF Open Data → in-between interpolation → ARCO ERA5 validation</li><li>Appendix A: Variable-name reference across GRIB2 / ERA5 / ECMWF</li><li>Appendix D: Skill metrics formulae (RMSE, MAE, Brier, CSI, HSS)</li></ol></div><h2 id="where-the-field-actually-is">Where the field actually is</h2>
+<p>The honest landscape, with model · year · output · resolution · cadence · TCC
+skill · open weights:</p>
+<ul>
+<li><strong>Keisler-2022</strong> · 2022 · Deterministic · 1° · 6h · demonstrated, weak · yes</li>
+<li><strong>GraphCast</strong> · 2023 · Deterministic · 0.25° · 6h · decent · yes</li>
+<li><strong>Pangu-Weather</strong> · 2023 · Deterministic · 0.25° · 1/3/6/24h · decent · yes</li>
+<li><strong>AIFS (ECMWF)</strong> · 2024 · Deterministic + ENS · 0.25° · 6h ·
+<em>best in class</em> · yes</li>
+<li><strong>GenCast</strong> · 2024 · Probabilistic (diffusion ensemble) · 0.25° · 12h ·
+strong, uncertainty-aware · yes</li>
+<li><strong>Aurora</strong> · 2024 · Foundation, fine-tunable · 0.25° · 6h · strong · yes</li>
+</ul>
+<p>The MAUSAM paper (arXiv 2509.01879, Sep 2025) benchmarks all of these against
+ground-based and geostationary observations — not just ERA5 — and finds AIFS
+most consistent overall, with GraphCast and GenCast close behind. All beat
+Keisler-2022 substantially. Errors against actual observations are 15–45%
+larger than errors against reanalysis, which is the relevant gap for an EO
+tasking application.</p>
+<h2 id="hardware-tiers">Hardware tiers</h2>
+<p><strong>Tier 1 (consumer, 8–16 GB VRAM)</strong> — RTX 5060 Ti (16 GB), 4060 Ti (16 GB).
+Comfortable: Keisler-2022, GraphCast-small (1°), FourCastNet v1, Pangu (no TCC),
+NeuralGCM (1.4°/2.8°). Tight: AIFS-single (0.25°, ~13 GB with flash-attn),
+GraphCast (0.25°), GenCast (1°). Won't fit: GenCast (0.25°, needs 60 GB),
+Aurora MR/HR.</p>
+<p><strong>Tier 2 (prosumer, 24–48 GB)</strong> — A6000, 4090, 5090. Adds AIFS-single
+comfortably, GraphCast at fp32, Aurora MR.</p>
+<p><strong>Tier 3 (enterprise, 80 GB+)</strong> — A100/H100. GenCast 0.25° (~25 min/member),
+Aurora HR (0.1°), training-from-scratch budgets.</p>
+<h2 id="the-lite-pattern">The ∂LITE pattern</h2>
+<p>The differentiability of neural forecasters enables a class of inverse-problem
+applications (sensitivity analysis, ML-native data assimilation,
+gradient-based tasking optimization) that physics models cannot match. For SSA
+and EO applications specifically, the ∂LITE pattern is the most promising
+design space: compose differentiable orbit, geometry, and atmospheric operators;
+optimize end-to-end for collection utility.</p>
+
+<p>The proprietary IP is the calibration head and the historical
+(forecast, observed-at-collect) archive, not the forecaster itself.</p>
+<h2 id="tcc-nowcasting-an-open-opportunity">TCC nowcasting: an open opportunity</h2>
+<p>Most nowcasting work targets precipitation. For TCC nowcasting (0–6 h cloud
+cover from geostationary imagery), practical options reduce to: (1) optical-flow
+extrapolation of geostationary cloud mask (classic, robust, ~1 h skillful
+horizon); (2) custom small ML model trained on (GOES L1B sequence) →
+(GOES L2 cloud mask future); (3) persistence + climatology blend at the
+lowest-effort end. <em>This is a real opportunity for proprietary EO-tasking IP:
+there is no strong public TCC nowcaster as of early 2026.</em></p>
+<hr class="ornament"><h2 id="status">Status & provenance</h2>
+<p>Produced in conversation
+<a href="https://claude.ai/chat/b47b9a50-630c-4bfd-a240-f41a59061091">b47b9a50</a>
+on 2026-05-07. Accompanied by a Colab notebook
+(<code>cloud_cover_forecasting.ipynb</code>, 26 cells) that exercises the full
+ECMWF Open Data → temporal interpolation → ARCO ERA5 validation pipeline.</p>
+</article>
+<footer class="colophon">
+  Reconstructed from past conversation snippets ·
+  <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
+</footer>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false});"></script>
+</body>
+</html>
