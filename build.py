@@ -20,8 +20,7 @@ HEAD = """<!DOCTYPE html>
 <meta name="description" content="{desc}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
-      integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<link rel="stylesheet" href="{root}assets/katex/katex.min.css">
 <link rel="stylesheet" href="{root}assets/style.css">
 </head>
 <body>
@@ -41,18 +40,28 @@ FOOT = """
   <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
 </footer>
 </div>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
-        integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
-        integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
-        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\\\(',right:'\\\\)',display:false},{left:'\\\\[',right:'\\\\]',display:true}],throwOnError:false});"></script>
+<script src="{root}assets/katex/katex.min.js"></script>
+<script src="{root}assets/katex/contrib/auto-render.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {{
+  renderMathInElement(document.body, {{
+    delimiters: [
+      {{left: '$$', right: '$$', display: true}},
+      {{left: '$',  right: '$',  display: false}},
+      {{left: '\\\\(', right: '\\\\)', display: false}},
+      {{left: '\\\\[', right: '\\\\]', display: true}}
+    ],
+    throwOnError: false
+  }});
+}});
+</script>
 </body>
 </html>
 """
 
 
 def page(title, desc, body, root="../"):
-    return HEAD.format(title=html.escape(title), desc=html.escape(desc), root=root) + body + FOOT
+    return HEAD.format(title=html.escape(title), desc=html.escape(desc), root=root) + body + FOOT.format(root=root)
 
 
 def monograph_html(m):
@@ -76,10 +85,10 @@ def monograph_html(m):
     parts.append(f'''
 <aside class="reconstruction-notice">
   <strong>Reconstruction notice.</strong> This page is a summary rebuilt from
-  fragments of the original conversation. It captures the abstract, structure,
-  and key passages but is not the complete monograph. The full source
-  (<code>.tex</code> / <code>.md</code> / <code>.pdf</code>) will replace this
-  scaffold once uploaded to <code>/pdfs/</code>.
+  fragments of the original conversation. The linked PDF is a PDF render of
+  <em>this reconstruction</em>, not the original monograph. To replace it with
+  the full source, drop the real <code>.pdf</code> into <code>/pdfs/</code>
+  using the same filename.
 </aside>
 ''')
 
