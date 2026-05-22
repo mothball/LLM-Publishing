@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vault — LLM-Publishing</title>
+<meta name="description" content="An interactive graph of concepts, tools, decisions, assumptions, and gaps across the LLM-Publishing monograph archive.">
+<link rel="stylesheet" href="assets/style.css">
+
+<style>
+/* Vault-specific overrides on top of the editorial stylesheet */
+.vault-shell { display: grid; grid-template-columns: 1fr 360px; gap: 0; height: calc(100vh - 80px); min-height: 600px; }
+.vault-graph { position: relative; background: var(--paper-deep); border-right: 1px solid var(--rule); overflow: hidden; }
+.vault-sidebar { padding: 1.4rem 1.6rem; overflow-y: auto; background: var(--paper); }
+
+#vault-svg { width: 100%; height: 100%; display: block; cursor: grab; }
+#vault-svg:active { cursor: grabbing; }
+
+.controls {
+  position: absolute; top: 1rem; left: 1rem; right: 1rem;
+  display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;
+  z-index: 10;
+}
+.search-box {
+  flex: 1; min-width: 180px; max-width: 320px;
+  font-family: var(--serif-body); font-size: 0.92rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--rule);
+  background: rgba(246, 241, 231, 0.92);
+  color: var(--ink); border-radius: 2px;
+  backdrop-filter: blur(4px);
+}
+.search-box:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+.legend {
+  background: rgba(246, 241, 231, 0.94);
+  border: 1px solid var(--rule); padding: 0.5rem 0.8rem;
+  font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.04em;
+  display: flex; gap: 0.9rem; flex-wrap: wrap; backdrop-filter: blur(4px);
+}
+.legend-item { display: flex; align-items: center; gap: 0.35rem; cursor: pointer;
+  user-select: none; transition: opacity 0.15s; }
+.legend-item.muted { opacity: 0.35; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+.node circle { stroke: var(--paper); stroke-width: 1.5px; cursor: pointer; transition: stroke-width 0.15s; }
+.node:hover circle { stroke-width: 3px; stroke: var(--ink); }
+.node.selected circle { stroke: var(--accent); stroke-width: 3px; }
+.node.dimmed { opacity: 0.18; }
+
+.node-label {
+  font-family: var(--serif-body); font-size: 11px; font-weight: 500;
+  fill: var(--ink); pointer-events: none;
+  paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round;
+}
+.node.dimmed .node-label { opacity: 0.18; }
+
+.edge {
+  stroke: var(--ink-faint); stroke-opacity: 0.45;
+  fill: none; transition: stroke-opacity 0.15s, stroke 0.15s;
+}
+.edge.highlight { stroke: var(--accent); stroke-opacity: 0.9; stroke-width: 2px; }
+.edge.dimmed { stroke-opacity: 0.08; }
+
+/* Edge kind dashing */
+.edge-cites      { stroke-dasharray: none; }
+.edge-depends    { stroke-dasharray: 4 3; }
+.edge-related    { stroke-dasharray: 1 4; }
+.edge-instantiates { stroke-dasharray: 8 3 1 3; }
+.edge-supersedes { stroke-dasharray: 2 2; }
+
+/* Sidebar / detail panel */
+.detail-empty { color: var(--ink-faint); font-style: italic; line-height: 1.55; font-size: 0.94rem; }
+.detail-empty p { margin: 0.6rem 0; }
+.detail-eyebrow {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.3rem;
+}
+.detail-title {
+  font-family: var(--serif-display); font-weight: 500;
+  font-size: 1.35rem; line-height: 1.15;
+  margin: 0 0 0.7rem; color: var(--ink);
+}
+.detail-summary { font-size: 0.96rem; line-height: 1.55; color: var(--ink-soft); margin-bottom: 1.1rem; }
+.detail-refs { font-size: 0.85rem; font-family: var(--mono); }
+.detail-refs h4 {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-faint); font-weight: 500;
+  margin: 1rem 0 0.4rem; border-top: 1px solid var(--rule); padding-top: 0.7rem;
+}
+.detail-refs a, .detail-refs button.refbtn {
+  display: block; color: var(--accent); text-decoration: none;
+  padding: 0.25rem 0; font-size: 0.85rem; background: none; border: none;
+  font-family: var(--mono); text-align: left; cursor: pointer; width: 100%;
+}
+.detail-refs a:hover, .detail-refs button.refbtn:hover { color: var(--accent-soft); text-decoration: underline; }
+.detail-url-btn {
+  display: inline-block; margin-top: 0.4rem;
+  font-family: var(--mono); font-size: 0.78rem; color: var(--accent);
+  border: 1px solid var(--accent); padding: 0.3rem 0.7rem; text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.detail-url-btn:hover { background: var(--accent); color: var(--paper); }
+
+.stats {
+  position: absolute; bottom: 1rem; left: 1rem;
+  font-family: var(--mono); font-size: 0.72rem; color: var(--ink-faint);
+  background: rgba(246, 241, 231, 0.92); padding: 0.35rem 0.7rem;
+  border: 1px solid var(--rule);
+  backdrop-filter: blur(4px); z-index: 5;
+}
+
+@media (max-width: 880px) {
+  .vault-shell { grid-template-columns: 1fr; grid-template-rows: 60vh auto; height: auto; }
+  .vault-graph { border-right: none; border-bottom: 1px solid var(--rule); }
+  .vault-sidebar { max-height: 50vh; }
+}
+</style>
+
+</head>
+<body>
+<div class="page">
+
+<header class="masthead">
+  <a href="index.html" class="brand">LLM <em>Publishing</em></a>
+  <nav>
+    <a href="index.html">Index</a>
+    <a href="vault.html">Vault</a>
+    <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
+  </nav>
+</header>
+
+<section class="hero" style="padding-bottom: 0.5rem;">
+  <h1 style="margin-bottom: 0.3rem;">The <em>vault</em>.</h1>
+  <p class="lede" style="max-width: 56rem;">
+    The knowledge graph behind the monographs &mdash; concepts, tools, decisions,
+    assumptions, and unrealized gaps, with the dependencies between them made
+    explicit. Click a node to see its summary and connections. Search anything.
+    Filter by type using the legend.
+  </p>
+</section>
+
+<div class="vault-shell">
+
+  <div class="vault-graph">
+    <div class="controls">
+      <input id="search" type="search" class="search-box" placeholder="Search nodes (concepts, tools, gaps…)" />
+      <div class="legend" id="legend"></div>
+    </div>
+    <svg id="vault-svg"></svg>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <aside class="vault-sidebar" id="sidebar">
+    <div class="detail-empty">
+      <p><strong>49 nodes, 64 edges.</strong></p>
+      <p>The vault expands the monograph archive into its underlying graph: the
+      ten monographs themselves, plus the concepts they develop, the tools they
+      depend on, the architectural decisions they record, the assumptions they
+      rest on, and the unrealized gaps they identify.</p>
+      <p>Click any node to see its summary and the connections that anchor it.
+      Concepts and tools are reused across monographs; the cross-citations between
+      monographs (already in the prose) show up as edges here.</p>
+      <p style="border-top: 1px solid var(--rule); padding-top: 0.8rem; margin-top: 1rem;">
+        <strong>Tip:</strong> the <em>gap</em> nodes (red) are the most useful entry
+        points &mdash; they're the open problems still worth working on.
+      </p>
+    </div>
+  </aside>
+
+</div>
+
+<footer class="colophon">
+  An interactive graph layer over the archive ·
+  <a href="https://github.com/mothball/LLM-Publishing">View source on GitHub</a>
+</footer>
+</div>
+
+<script src="assets/vault-data.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// ============================================================================
+// VAULT VISUALIZER
+// ============================================================================
+const TYPE_COLOR = {
+  monograph:  '#8a2b1a',  // oxblood (accent)
+  concept:    '#3b5b7a',  // muted blue
+  tool:       '#5a6e3a',  // olive
+  decision:   '#7a5a2e',  // amber-brown
+  assumption: '#6a4a6e',  // dusty plum
+  gap:        '#b8593f',  // soft red (accent-soft)
+};
+
+const TYPE_LABEL = {
+  monograph: 'monograph', concept: 'concept', tool: 'tool',
+  decision: 'decision', assumption: 'assumption', gap: 'gap',
+};
+
+const TYPE_RADIUS = {
+  monograph: 11, concept: 7, tool: 7, decision: 8, assumption: 7, gap: 9,
+};
+
+const nodes = VAULT.nodes.map(n => Object.assign({}, n));
+const edges = VAULT.edges.map(e => Object.assign({}, e));
+
+// Build adjacency for highlight-on-hover
+const adj = new Map();
+nodes.forEach(n => adj.set(n.id, new Set()));
+edges.forEach(e => {
+  adj.get(e.source)?.add(e.target);
+  adj.get(e.target)?.add(e.source);
+});
+const nodesById = new Map(nodes.map(n => [n.id, n]));
+
+const svg = d3.select('#vault-svg');
+const container = document.querySelector('.vault-graph');
+
+let width = container.clientWidth;
+let height = container.clientHeight;
+svg.attr('viewBox', [-width/2, -height/2, width, height]);
+
+// Zoom & pan
+const zoomRoot = svg.append('g');
+svg.call(d3.zoom()
+  .scaleExtent([0.3, 4])
+  .on('zoom', e => zoomRoot.attr('transform', e.transform))
+);
+
+// Force simulation
+const sim = d3.forceSimulation(nodes)
+  .force('link', d3.forceLink(edges).id(d => d.id).distance(d => {
+    // Monograph-to-monograph links shorter; concept↔monograph longer
+    const sType = nodesById.get(typeof d.source === 'object' ? d.source.id : d.source)?.type;
+    const tType = nodesById.get(typeof d.target === 'object' ? d.target.id : d.target)?.type;
+    if (sType === 'monograph' && tType === 'monograph') return 90;
+    if (sType === 'gap' || tType === 'gap') return 100;
+    return 70;
+  }).strength(0.5))
+  .force('charge', d3.forceManyBody().strength(-260))
+  .force('center', d3.forceCenter(0, 0))
+  .force('collide', d3.forceCollide(d => TYPE_RADIUS[d.type] + 8));
+
+// Edges
+const linkG = zoomRoot.append('g').attr('class', 'edges');
+const link = linkG.selectAll('line').data(edges).enter()
+  .append('line')
+  .attr('class', d => `edge edge-${d.kind || 'cites'}`);
+
+// Nodes
+const nodeG = zoomRoot.append('g').attr('class', 'nodes');
+const node = nodeG.selectAll('g').data(nodes).enter()
+  .append('g').attr('class', 'node')
+  .call(d3.drag()
+    .on('start', (e, d) => {
+      if (!e.active) sim.alphaTarget(0.3).restart();
+      d.fx = d.x; d.fy = d.y;
+    })
+    .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+    .on('end', (e, d) => {
+      if (!e.active) sim.alphaTarget(0);
+      d.fx = null; d.fy = null;
+    })
+  );
+
+node.append('circle')
+  .attr('r', d => TYPE_RADIUS[d.type])
+  .attr('fill', d => TYPE_COLOR[d.type]);
+
+// Labels: only render for monographs and gaps by default (less clutter)
+node.append('text')
+  .attr('class', 'node-label')
+  .attr('text-anchor', 'middle')
+  .attr('dy', d => TYPE_RADIUS[d.type] + 11)
+  .text(d => {
+    if (d.type === 'monograph') return d.label.replace(/^№ /, '№').replace(/ — .*$/, '');
+    if (d.type === 'gap') return d.label;
+    if (d.type === 'concept') return d.label.length > 24 ? d.label.slice(0, 22) + '…' : d.label;
+    if (d.type === 'tool') return d.label;
+    if (d.type === 'decision') return d.label.length > 26 ? d.label.slice(0, 24) + '…' : d.label;
+    if (d.type === 'assumption') return d.label.length > 24 ? d.label.slice(0, 22) + '…' : d.label;
+    return d.label;
+  });
+
+// Hover highlight
+node.on('mouseenter', (event, d) => {
+  if (selected) return; // don't trample selection
+  highlightNeighborhood(d.id);
+}).on('mouseleave', () => {
+  if (selected) return;
+  clearHighlight();
+}).on('click', (event, d) => {
+  selectNode(d.id);
+  event.stopPropagation();
+});
+
+svg.on('click', () => {
+  selected = null;
+  clearHighlight();
+  renderSidebar(null);
+});
+
+sim.on('tick', () => {
+  link
+    .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+  node.attr('transform', d => `translate(${d.x},${d.y})`);
+});
+
+function highlightNeighborhood(id) {
+  const n = adj.get(id) || new Set();
+  node.classed('dimmed', d => d.id !== id && !n.has(d.id));
+  link.classed('dimmed', e => {
+    const s = typeof e.source === 'object' ? e.source.id : e.source;
+    const t = typeof e.target === 'object' ? e.target.id : e.target;
+    return s !== id && t !== id;
+  });
+  link.classed('highlight', e => {
+    const s = typeof e.source === 'object' ? e.source.id : e.source;
+    const t = typeof e.target === 'object' ? e.target.id : e.target;
+    return s === id || t === id;
+  });
+}
+function clearHighlight() {
+  node.classed('dimmed', false).classed('selected', false);
+  link.classed('dimmed', false).classed('highlight', false);
+}
+
+// Selection state
+let selected = null;
+function selectNode(id) {
+  selected = id;
+  highlightNeighborhood(id);
+  node.classed('selected', d => d.id === id);
+  renderSidebar(nodesById.get(id));
+}
+
+function renderSidebar(d) {
+  const sb = document.getElementById('sidebar');
+  if (!d) {
+    sb.innerHTML = `
+      <div class="detail-empty">
+        <p><strong>49 nodes, 64 edges.</strong></p>
+        <p>The vault expands the monograph archive into its underlying graph: the
+        ten monographs themselves, plus the concepts they develop, the tools they
+        depend on, the architectural decisions they record, the assumptions they
+        rest on, and the unrealized gaps they identify.</p>
+        <p>Click any node to see its summary and the connections that anchor it.</p>
+        <p style="border-top: 1px solid var(--rule); padding-top: 0.8rem; margin-top: 1rem;">
+          <strong>Tip:</strong> the <em>gap</em> nodes (red) are the most useful entry
+          points — they're the open problems still worth working on.
+        </p>
+      </div>`;
+    return;
+  }
+  const neighbors = [...(adj.get(d.id) || [])].map(id => nodesById.get(id))
+    .sort((a, b) => a.type.localeCompare(b.type) || a.label.localeCompare(b.label));
+  const grouped = {};
+  neighbors.forEach(n => { (grouped[n.type] ||= []).push(n); });
+
+  let refsHTML = '';
+  Object.keys(grouped).sort().forEach(typ => {
+    refsHTML += `<h4>Connected ${typ}s</h4>`;
+    grouped[typ].forEach(n => {
+      refsHTML += `<button class="refbtn" data-id="${n.id}">${n.label}</button>`;
+    });
+  });
+
+  const urlBtn = d.url
+    ? `<a class="detail-url-btn" href="${d.url}">Read full monograph &rarr;</a>` : '';
+
+  sb.innerHTML = `
+    <div class="detail-eyebrow">${TYPE_LABEL[d.type]}${d.date ? ' · ' + d.date : ''}</div>
+    <h2 class="detail-title">${d.label}</h2>
+    <p class="detail-summary">${d.summary}</p>
+    ${urlBtn}
+    <div class="detail-refs">${refsHTML}</div>
+  `;
+  // Wire up the buttons
+  sb.querySelectorAll('button.refbtn').forEach(btn => {
+    btn.addEventListener('click', () => selectNode(btn.dataset.id));
+  });
+}
+
+// Legend with type-toggle filters
+const legendEl = document.getElementById('legend');
+const typeOrder = ['monograph', 'concept', 'tool', 'decision', 'assumption', 'gap'];
+const enabledTypes = new Set(typeOrder);
+
+typeOrder.forEach(t => {
+  const div = document.createElement('div');
+  div.className = 'legend-item';
+  div.dataset.type = t;
+  div.innerHTML = `<span class="legend-dot" style="background:${TYPE_COLOR[t]}"></span>${TYPE_LABEL[t]}`;
+  div.addEventListener('click', () => {
+    if (enabledTypes.has(t)) enabledTypes.delete(t); else enabledTypes.add(t);
+    div.classList.toggle('muted');
+    applyTypeFilter();
+  });
+  legendEl.appendChild(div);
+});
+
+function applyTypeFilter() {
+  node.style('display', d => enabledTypes.has(d.type) ? '' : 'none');
+  link.style('display', e => {
+    const s = typeof e.source === 'object' ? e.source : nodesById.get(e.source);
+    const t = typeof e.target === 'object' ? e.target : nodesById.get(e.target);
+    return (enabledTypes.has(s.type) && enabledTypes.has(t.type)) ? '' : 'none';
+  });
+  updateStats();
+}
+
+// Search
+const searchEl = document.getElementById('search');
+searchEl.addEventListener('input', () => {
+  const q = searchEl.value.toLowerCase().trim();
+  if (!q) {
+    if (!selected) clearHighlight();
+    return;
+  }
+  const matches = new Set(nodes.filter(n =>
+    n.label.toLowerCase().includes(q) ||
+    (n.summary || '').toLowerCase().includes(q)
+  ).map(n => n.id));
+  node.classed('dimmed', d => !matches.has(d.id));
+  link.classed('dimmed', e => {
+    const s = typeof e.source === 'object' ? e.source.id : e.source;
+    const t = typeof e.target === 'object' ? e.target.id : e.target;
+    return !(matches.has(s) && matches.has(t));
+  });
+});
+searchEl.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { searchEl.value = ''; searchEl.dispatchEvent(new Event('input')); }
+});
+
+// Stats
+function updateStats() {
+  const v = nodes.filter(n => enabledTypes.has(n.type)).length;
+  const e = edges.filter(ed => {
+    const s = typeof ed.source === 'object' ? ed.source : nodesById.get(ed.source);
+    const t = typeof ed.target === 'object' ? ed.target : nodesById.get(ed.target);
+    return enabledTypes.has(s.type) && enabledTypes.has(t.type);
+  }).length;
+  document.getElementById('stats').textContent = `${v} nodes · ${e} edges · click & drag · scroll to zoom`;
+}
+updateStats();
+
+// Resize handling
+window.addEventListener('resize', () => {
+  width = container.clientWidth; height = container.clientHeight;
+  svg.attr('viewBox', [-width/2, -height/2, width, height]);
+  sim.force('center', d3.forceCenter(0, 0));
+  sim.alpha(0.2).restart();
+});
+</script>
+</body>
+</html>

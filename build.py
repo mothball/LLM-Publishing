@@ -29,6 +29,7 @@ HEAD = """<!DOCTYPE html>
   <a href="{root}index.html" class="brand">LLM <em>Publishing</em></a>
   <nav>
     <a href="{root}index.html">Index</a>
+    <a href="{root}vault.html">Vault</a>
     <a href="https://github.com/mothball/LLM-Publishing">GitHub</a>
   </nav>
 </header>
@@ -144,6 +145,11 @@ def index_html(monographs):
     with Claude across 2026 — orbital propagation, astrodynamics, scientific
     computing systems, viewshed geometry, weather forecasting infrastructure.
     Reconstructed here from conversation fragments; original PDFs to follow.
+  </p>
+  <p class="lede" style="font-size: 1.02em; margin-top: 1rem;">
+    See also the <a href="vault.html"><strong>Vault</strong></a> — an interactive
+    graph of the concepts, tools, decisions, assumptions, and unrealized gaps
+    that connect these monographs to one another.
   </p>
 </section>
 <ul class="monograph-list">{"".join(items)}</ul>

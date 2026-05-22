@@ -1,0 +1,775 @@
+// AUTO-GENERATED from vault_data.py. Do not edit by hand.
+const VAULT = {
+  "nodes": [
+    {
+      "id": "m01",
+      "type": "monograph",
+      "label": "\u2116 01 \u2014 Propagator perf comparison",
+      "summary": "15-cell table comparing Heyoka, MCPI, MCPI\u00d7Taylor, Fixed RK, Adaptive RK across J2/EGM-70/EGM+drag+SRP and CPU/GPU.",
+      "url": "monographs/01-orbit-propagator-performance-comparison.html",
+      "date": "2026-05-22"
+    },
+    {
+      "id": "m02",
+      "type": "monograph",
+      "label": "\u2116 02 \u2014 Performant Vectorized Python",
+      "summary": "Memory hierarchy, NumPy 2.x internals, SIMD dispatch, NEP 54, free-threading, the convergence thesis.",
+      "url": "monographs/02-performant-vectorized-python.html",
+      "date": "2026-05-17"
+    },
+    {
+      "id": "m03",
+      "type": "monograph",
+      "label": "\u2116 03 \u2014 Differentiable substrate (case)",
+      "summary": "Operational SDA rests on a closed-architecture ceiling. End-to-end differentiability + GPU-native batching breaks it.",
+      "url": "monographs/03-differentiable-astrodynamics-substrate.html",
+      "date": "2026-05-08"
+    },
+    {
+      "id": "m04",
+      "type": "monograph",
+      "label": "\u2116 04 \u2014 JAX roadmap",
+      "summary": "JAX-native differentiable astrodynamics substrate. Diffrax + Lineax + jet, single-GPU first.",
+      "url": "monographs/04-jax-astrodynamics-roadmap.html",
+      "date": "2026-05-08"
+    },
+    {
+      "id": "m05",
+      "type": "monograph",
+      "label": "\u2116 05 \u2014 Mojo roadmap",
+      "summary": "Mojo-native version. Optimization tier for hot kernels via cuTile or custom CUDA C++.",
+      "url": "monographs/05-mojo-astrodynamics-roadmap.html",
+      "date": "2026-05-08"
+    },
+    {
+      "id": "m06",
+      "type": "monograph",
+      "label": "\u2116 06 \u2014 Cloud cover forecasting",
+      "summary": "Total cloud cover prediction for EO satellite tasking decisions.",
+      "url": "monographs/06-cloud-cover-forecasting.html",
+      "date": "2026-05-07"
+    },
+    {
+      "id": "m07",
+      "type": "monograph",
+      "label": "\u2116 07 \u2014 Horizon masks",
+      "summary": "Precomputed azimuth\u2013elevation horizon masks for satellite viewshed geometry.",
+      "url": "monographs/07-viewshed-azel-lookup.html",
+      "date": "2026-04-23"
+    },
+    {
+      "id": "m08",
+      "type": "monograph",
+      "label": "\u2116 08 \u2014 UCT \u2192 TLE pipeline",
+      "summary": "Electro-optical telescope \u2192 uncorrelated track \u2192 TLE pipeline with full math.",
+      "url": "monographs/08-tle-from-uct-pipeline.html",
+      "date": "2026-04-09"
+    },
+    {
+      "id": "m09",
+      "type": "monograph",
+      "label": "\u2116 09 \u2014 Orbital propagation & UQ review",
+      "summary": "Literature review across MCPI, regularization, differential algebra, and uncertainty propagation.",
+      "url": "monographs/09-orbital-propagation-uq-literature-review.html",
+      "date": "2026-04-01"
+    },
+    {
+      "id": "m10",
+      "type": "monograph",
+      "label": "\u2116 10 \u2014 Hybrid architecture PRD v12",
+      "summary": "Trait-driven scientific computing substrate. HasCustomAdjoint, sensitivity-analysis crossover, the LEAN spec layer.",
+      "url": "monographs/10-mojo-hybrid-architecture-prd-v12.html",
+      "date": "2026-03-20"
+    },
+    {
+      "id": "c.mcpi",
+      "type": "concept",
+      "label": "MCPI",
+      "summary": "Modified Chebyshev\u2013Picard Iteration. Fixed-point iteration on whole-arc trajectories represented in a Chebyshev basis. Cascade form. Six precomputed operators (A, P\u2081, P\u2082, T\u2081, T\u2082, T\u2090).",
+      "refs": [
+        "m01",
+        "m09"
+      ]
+    },
+    {
+      "id": "c.heyoka",
+      "type": "concept",
+      "label": "Heyoka / adaptive Taylor",
+      "summary": "Variable-order Taylor series integration via LLVM JIT + AD on the RHS. Best-in-class CPU latency for moderately-perturbed orbits. AVX-512 batched.",
+      "refs": [
+        "m01",
+        "m09"
+      ]
+    },
+    {
+      "id": "c.cascade",
+      "type": "concept",
+      "label": "Cascade form (kinematic consistency)",
+      "summary": "\u03b3 \u2192 \u03b2 \u2192 \u03b1 (accel coeffs \u2192 vel coeffs \u2192 pos coeffs). Two integrations, sequentially. Position is the integral of velocity by construction at every iteration.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "c.var_fid",
+      "type": "concept",
+      "label": "Variable-fidelity gravity",
+      "summary": "J2\u2013J6 base + \u03b4G cache, refreshed only at err-crossings {1e-1, 1e-4, 1e-7, 1e-10}. Macomber et al. (2016).",
+      "refs": [
+        "m01",
+        "m09"
+      ]
+    },
+    {
+      "id": "c.radial_adapt",
+      "type": "concept",
+      "label": "Radially adaptive degree",
+      "summary": "Spherical-harmonic degree as a function of (radius, tol). Probe et al. (2015) lookup table. 100\u00d714 bins.",
+      "refs": [
+        "m01",
+        "m09"
+      ]
+    },
+    {
+      "id": "c.taylor_warm",
+      "type": "concept",
+      "label": "Taylor warm start (jet)",
+      "summary": "Per-segment warm start via high-order forward AD of perturbed RHS. Drops Picard iteration count ~15 \u2192 ~5 at EGM-70 fidelity.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "c.simt_div",
+      "type": "concept",
+      "label": "SIMT divergence",
+      "summary": "Warp lockstep penalty when batched orbits take different adaptive step counts. Kills Heyoka/DOP853 on GPU. MCPI sidesteps by holding (seg, N) constant across the batch.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "c.tensor_core",
+      "type": "concept",
+      "label": "Tensor Core utilization",
+      "summary": "FP64 Tensor Cores on H100 deliver ~67 TF/s peak. Cascade matmuls at N=40 with B\u22481024 orbits batched fill the pipeline. Below B\u2248100 you don't earn keep.",
+      "refs": [
+        "m01",
+        "m04"
+      ]
+    },
+    {
+      "id": "c.cgl_nodes",
+      "type": "concept",
+      "label": "CGL nodes",
+      "summary": "Chebyshev\u2013Gauss\u2013Lobatto nodes \u03c4\u2096 = -cos(k\u03c0/M). Near-optimal interpolation; clustering at endpoints kills the Runge phenomenon.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "c.iod",
+      "type": "concept",
+      "label": "Initial orbit determination",
+      "summary": "Laplace, Gauss/Herrick-Gibbs, double-r (Escobal), Gooding. Producing a 6-state from a sparse tracklet.",
+      "refs": [
+        "m08"
+      ]
+    },
+    {
+      "id": "c.admissible",
+      "type": "concept",
+      "label": "Admissible region (AR/CAR)",
+      "summary": "Energy-based bound on (range, range-rate) for a too-short arc with no clean IOD solution. Constrained variant adds a-priori orbit-regime priors.",
+      "refs": [
+        "m08"
+      ]
+    },
+    {
+      "id": "c.diff_alg",
+      "type": "concept",
+      "label": "Differential algebra / Taylor maps",
+      "summary": "Polynomial representation of state-transition maps. Taylor Map Diffusion for conjunction probability \u2014 3 orders of magnitude faster than Monte Carlo with gradients for free.",
+      "refs": [
+        "m03",
+        "m09"
+      ]
+    },
+    {
+      "id": "c.frame_red",
+      "type": "concept",
+      "label": "IAU 2006/2000A frame reduction",
+      "summary": "R = W\u00b7R\u00b7N\u00b7P. Precession, nutation, sidereal time, polar motion. Required for SP3-grade work; simplified GMST sufficient for internal verification.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "c.uq_mc",
+      "type": "concept",
+      "label": "UQ via Monte Carlo",
+      "summary": "Sample-based uncertainty propagation. Naive baseline; expensive. Catalog-scale only viable on GPU.",
+      "refs": [
+        "m01",
+        "m09"
+      ]
+    },
+    {
+      "id": "t.jax",
+      "type": "tool",
+      "label": "JAX",
+      "summary": "Functional array programming with jit/vmap/grad. XLA backend on GPU. Diffrax for ODEs, jet for Taylor coefficients, Lineax for linear solves.",
+      "refs": [
+        "m02",
+        "m03",
+        "m04"
+      ]
+    },
+    {
+      "id": "t.mojo",
+      "type": "tool",
+      "label": "Mojo",
+      "summary": "Modular's Python-syntax compiled language. SIMD primitives, GPU kernels, comptime metaprogramming. Optimization tier in the hybrid architecture.",
+      "refs": [
+        "m05",
+        "m10"
+      ]
+    },
+    {
+      "id": "t.numba",
+      "type": "tool",
+      "label": "Numba",
+      "summary": "JIT-compiled Python via LLVM. The reference/validation tier in the dual-backend pattern. AVX2/AVX-512 auto-vectorization.",
+      "refs": [
+        "m02",
+        "m04"
+      ]
+    },
+    {
+      "id": "t.lean",
+      "type": "tool",
+      "label": "LEAN 4",
+      "summary": "Dependent type theory + proof assistant. Spec layer above PRD, below code. Mathlib4 as the foundation.",
+      "refs": [
+        "m10"
+      ]
+    },
+    {
+      "id": "t.diffrax",
+      "type": "tool",
+      "label": "Diffrax",
+      "summary": "JAX-native ODE library by Patrick Kidger. Adaptive stepping, Taylor schemes via jet, sensitivity analysis. ~80% of the Taylor primitive needed for MCPI\u00d7Taylor.",
+      "refs": [
+        "m01",
+        "m04"
+      ]
+    },
+    {
+      "id": "t.cutile",
+      "type": "tool",
+      "label": "cuTile / CUDA C++",
+      "summary": "Optimization tier for hot kernels. Explicit tile schemes for narrow matmuls; 1.5\u20133\u00d7 over generic XLA/cuBLAS.",
+      "refs": [
+        "m01",
+        "m05"
+      ]
+    },
+    {
+      "id": "t.numpy",
+      "type": "tool",
+      "label": "NumPy 2.x",
+      "summary": "Reference array library. NEP 38/54 SIMD dispatch via Google Highway. Free-threading-compatible.",
+      "refs": [
+        "m02"
+      ]
+    },
+    {
+      "id": "t.egm2008",
+      "type": "tool",
+      "label": "EGM2008",
+      "summary": "Earth Gravitational Model coefficients to degree/order 2190. Truncated to 70 in production MCPI. Cunningham or Pines recursions.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "t.nrlmsise",
+      "type": "tool",
+      "label": "NRLMSISE-00",
+      "summary": "Empirical atmospheric density model. Inputs: F10.7, Ap. Operational standard for drag in LEO orbit determination.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "t.de440",
+      "type": "tool",
+      "label": "JPL DE440",
+      "summary": "Planetary ephemeris. Sun, Moon positions for third-body perturbations.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "d.jax_primary",
+      "type": "decision",
+      "label": "JAX as primary stack",
+      "summary": "Decision: JAX-first with Mojo/cuTile/CUDA-C++ as optional optimization layer for profiled hot kernels. 1\u20133 month shipping horizon vs 6+ for Mojo-primary.",
+      "refs": [
+        "m04",
+        "m05"
+      ]
+    },
+    {
+      "id": "d.cascade_canonical",
+      "type": "decision",
+      "label": "Cascade form is canonical",
+      "summary": "Decision: never compound into a single matrix M = T\u2082P\u2082P\u2081A. Kinematic consistency + error feedback require the intermediate \u03b2 to be exposed.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "d.tier_strategy",
+      "type": "decision",
+      "label": "Three-tier verification",
+      "summary": "Tier 1 analytic (operator self-tests + 2-body conservation), Tier 2 reference-tool (Woollands C++ byte-equivalence to 1e-12 is THE critical test), Tier 3 empirical (GPS SP3 \u226450m, round-trip closure, MMS).",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "d.mcpi_taylor_hybrid",
+      "type": "decision",
+      "label": "MCPI \u00d7 Taylor hybrid is the contribution",
+      "summary": "Decision: Pursue the MCPI cascade + Taylor warm-start hybrid as the publishable result, not pure JAX-Heyoka port. Expected: another 3\u00d7 over MCPI/GPU at EGM-70.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "a.lp_h100",
+      "type": "assumption",
+      "label": "Single H100 reference",
+      "summary": "Throughput numbers benchmarked against a single H100 (80GB HBM3, ~67 TF/s FP64 peak). Multi-GPU sharding favors MCPI structurally; not in current scope.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "a.well_tuned",
+      "type": "assumption",
+      "label": "Well-tuned implementations",
+      "summary": "All performance estimates assume batched, JIT-compiled, vectorized implementations. Naive ports lose 5\u201350\u00d7 to the values shown.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "a.production_acc",
+      "type": "assumption",
+      "label": "Production accuracy targets",
+      "summary": "J2: 1m at 1d. EGM-70: 10m at 7d. EGM+drag+SRP: 100m at 7d. LEO regime throughout.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "a.drag_uncacheable",
+      "type": "assumption",
+      "label": "Drag is uncacheable in MCPI",
+      "summary": "NRLMSISE-00 depends on position AND epoch; density varies on shorter timescales than gravity. Variable-fidelity \u03b4G-cache doesn't apply.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "g.mcpi_taylor",
+      "type": "gap",
+      "label": "MCPI \u00d7 Taylor not yet built",
+      "summary": "The headline hybrid is a structural prediction, not a measurement. Need to implement and bake off against MCPI/GPU baseline at EGM-70.",
+      "refs": [
+        "m01",
+        "m09"
+      ]
+    },
+    {
+      "id": "g.real_benchmark",
+      "type": "gap",
+      "label": "Real bake-off across methods",
+      "summary": "Current table is order-of-magnitude estimates from flop counts. A proper bake-off (identical scenario, all five methods, both hardware classes, at fixed accuracy) is the next implementation milestone.",
+      "refs": [
+        "m01"
+      ]
+    },
+    {
+      "id": "g.open_source_gj",
+      "type": "gap",
+      "label": "Open-source Gauss-Jackson",
+      "summary": "No production-grade open-source Gauss-Jackson 8th-order integrator exists. Reference implementations are paywalled or closed.",
+      "refs": [
+        "m09"
+      ]
+    },
+    {
+      "id": "g.regularized_prop",
+      "type": "gap",
+      "label": "Regularized propagation in production",
+      "summary": "KS, DROMO, and other regularization schemes haven't crossed from research literature into operational use. Why not?",
+      "refs": [
+        "m09"
+      ]
+    },
+    {
+      "id": "g.cheby_taylor",
+      "type": "gap",
+      "label": "Semiglobal Chebyshev\u00d7Taylor",
+      "summary": "The combination of Chebyshev-in-time (MCPI) \u00d7 Taylor-in-state (DA) was flagged by \u2116 09 as unrealized. \u2116 01 is the proposal; implementation still TBD.",
+      "refs": [
+        "m01",
+        "m09"
+      ]
+    },
+    {
+      "id": "g.adaptive_switching",
+      "type": "gap",
+      "label": "Adaptive formulation switching",
+      "summary": "Choosing Cartesian vs regularized formulation per segment based on local orbit geometry. Conceptually clean; nobody has built it.",
+      "refs": [
+        "m09"
+      ]
+    },
+    {
+      "id": "g.catalog_uq",
+      "type": "gap",
+      "label": "Catalog-scale UQ",
+      "summary": "Propagating ~40,000 LEO objects each with B = 10^4 MC realizations is the operational target. Bottleneck is no longer compute (MCPI/GPU solves it); it's data flow + verification + integration into operational SDA stacks.",
+      "refs": [
+        "m01",
+        "m03"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "m01",
+      "target": "m03",
+      "kind": "cites"
+    },
+    {
+      "source": "m01",
+      "target": "m04",
+      "kind": "cites"
+    },
+    {
+      "source": "m01",
+      "target": "m05",
+      "kind": "cites"
+    },
+    {
+      "source": "m01",
+      "target": "m08",
+      "kind": "cites"
+    },
+    {
+      "source": "m01",
+      "target": "m09",
+      "kind": "cites"
+    },
+    {
+      "source": "m04",
+      "target": "m03",
+      "kind": "instantiates"
+    },
+    {
+      "source": "m05",
+      "target": "m03",
+      "kind": "instantiates"
+    },
+    {
+      "source": "m05",
+      "target": "m10",
+      "kind": "depends"
+    },
+    {
+      "source": "m04",
+      "target": "m10",
+      "kind": "depends"
+    },
+    {
+      "source": "m10",
+      "target": "m03",
+      "kind": "depends"
+    },
+    {
+      "source": "c.mcpi",
+      "target": "m01",
+      "kind": "developed_in"
+    },
+    {
+      "source": "c.mcpi",
+      "target": "m09",
+      "kind": "developed_in"
+    },
+    {
+      "source": "c.cascade",
+      "target": "c.mcpi",
+      "kind": "part_of"
+    },
+    {
+      "source": "c.var_fid",
+      "target": "c.mcpi",
+      "kind": "part_of"
+    },
+    {
+      "source": "c.radial_adapt",
+      "target": "c.mcpi",
+      "kind": "part_of"
+    },
+    {
+      "source": "c.cgl_nodes",
+      "target": "c.mcpi",
+      "kind": "part_of"
+    },
+    {
+      "source": "c.taylor_warm",
+      "target": "c.mcpi",
+      "kind": "extends"
+    },
+    {
+      "source": "c.taylor_warm",
+      "target": "c.heyoka",
+      "kind": "extends"
+    },
+    {
+      "source": "c.simt_div",
+      "target": "c.heyoka",
+      "kind": "affects"
+    },
+    {
+      "source": "c.tensor_core",
+      "target": "c.cascade",
+      "kind": "instantiates"
+    },
+    {
+      "source": "c.iod",
+      "target": "m08",
+      "kind": "developed_in"
+    },
+    {
+      "source": "c.admissible",
+      "target": "m08",
+      "kind": "developed_in"
+    },
+    {
+      "source": "c.admissible",
+      "target": "c.iod",
+      "kind": "alternative_to"
+    },
+    {
+      "source": "c.diff_alg",
+      "target": "m03",
+      "kind": "developed_in"
+    },
+    {
+      "source": "c.diff_alg",
+      "target": "m09",
+      "kind": "developed_in"
+    },
+    {
+      "source": "c.diff_alg",
+      "target": "c.taylor_warm",
+      "kind": "related"
+    },
+    {
+      "source": "c.uq_mc",
+      "target": "c.diff_alg",
+      "kind": "alternative_to"
+    },
+    {
+      "source": "c.uq_mc",
+      "target": "g.catalog_uq",
+      "kind": "addresses"
+    },
+    {
+      "source": "c.frame_red",
+      "target": "c.mcpi",
+      "kind": "depends"
+    },
+    {
+      "source": "t.jax",
+      "target": "m04",
+      "kind": "used_in"
+    },
+    {
+      "source": "t.jax",
+      "target": "m02",
+      "kind": "used_in"
+    },
+    {
+      "source": "t.mojo",
+      "target": "m05",
+      "kind": "used_in"
+    },
+    {
+      "source": "t.mojo",
+      "target": "m10",
+      "kind": "used_in"
+    },
+    {
+      "source": "t.numba",
+      "target": "m02",
+      "kind": "used_in"
+    },
+    {
+      "source": "t.lean",
+      "target": "m10",
+      "kind": "used_in"
+    },
+    {
+      "source": "t.diffrax",
+      "target": "t.jax",
+      "kind": "built_on"
+    },
+    {
+      "source": "t.diffrax",
+      "target": "c.taylor_warm",
+      "kind": "implements"
+    },
+    {
+      "source": "t.diffrax",
+      "target": "c.heyoka",
+      "kind": "related"
+    },
+    {
+      "source": "t.cutile",
+      "target": "t.mojo",
+      "kind": "alternative_to"
+    },
+    {
+      "source": "t.numpy",
+      "target": "m02",
+      "kind": "developed_in"
+    },
+    {
+      "source": "t.egm2008",
+      "target": "c.mcpi",
+      "kind": "used_in"
+    },
+    {
+      "source": "t.nrlmsise",
+      "target": "a.drag_uncacheable",
+      "kind": "causes"
+    },
+    {
+      "source": "t.de440",
+      "target": "c.mcpi",
+      "kind": "used_in"
+    },
+    {
+      "source": "d.jax_primary",
+      "target": "m04",
+      "kind": "stated_in"
+    },
+    {
+      "source": "d.jax_primary",
+      "target": "m05",
+      "kind": "stated_in"
+    },
+    {
+      "source": "d.cascade_canonical",
+      "target": "m01",
+      "kind": "stated_in"
+    },
+    {
+      "source": "d.cascade_canonical",
+      "target": "c.cascade",
+      "kind": "concerns"
+    },
+    {
+      "source": "d.tier_strategy",
+      "target": "m01",
+      "kind": "stated_in"
+    },
+    {
+      "source": "d.mcpi_taylor_hybrid",
+      "target": "m01",
+      "kind": "stated_in"
+    },
+    {
+      "source": "d.mcpi_taylor_hybrid",
+      "target": "c.taylor_warm",
+      "kind": "concerns"
+    },
+    {
+      "source": "d.mcpi_taylor_hybrid",
+      "target": "g.mcpi_taylor",
+      "kind": "creates"
+    },
+    {
+      "source": "a.lp_h100",
+      "target": "m01",
+      "kind": "stated_in"
+    },
+    {
+      "source": "a.well_tuned",
+      "target": "m01",
+      "kind": "stated_in"
+    },
+    {
+      "source": "a.production_acc",
+      "target": "m01",
+      "kind": "stated_in"
+    },
+    {
+      "source": "a.drag_uncacheable",
+      "target": "c.var_fid",
+      "kind": "limits"
+    },
+    {
+      "source": "g.mcpi_taylor",
+      "target": "c.taylor_warm",
+      "kind": "concerns"
+    },
+    {
+      "source": "g.mcpi_taylor",
+      "target": "g.cheby_taylor",
+      "kind": "instance_of"
+    },
+    {
+      "source": "g.real_benchmark",
+      "target": "m01",
+      "kind": "concerns"
+    },
+    {
+      "source": "g.real_benchmark",
+      "target": "d.mcpi_taylor_hybrid",
+      "kind": "validates"
+    },
+    {
+      "source": "g.open_source_gj",
+      "target": "m09",
+      "kind": "flagged_in"
+    },
+    {
+      "source": "g.regularized_prop",
+      "target": "m09",
+      "kind": "flagged_in"
+    },
+    {
+      "source": "g.cheby_taylor",
+      "target": "m09",
+      "kind": "flagged_in"
+    },
+    {
+      "source": "g.adaptive_switching",
+      "target": "m09",
+      "kind": "flagged_in"
+    },
+    {
+      "source": "g.catalog_uq",
+      "target": "c.uq_mc",
+      "kind": "concerns"
+    }
+  ]
+};
