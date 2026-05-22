@@ -140,7 +140,7 @@ def index_html(monographs):
 <section class="hero">
   <h1>A small archive of <em>monographs</em>.</h1>
   <p class="lede">
-    Nine self-contained technical treatises produced in conversation
+    Ten self-contained technical treatises produced in conversation
     with Claude across 2026 — orbital propagation, astrodynamics, scientific
     computing systems, viewshed geometry, weather forecasting infrastructure.
     Reconstructed here from conversation fragments; original PDFs to follow.

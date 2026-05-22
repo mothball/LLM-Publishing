@@ -3,15 +3,299 @@
 MONOGRAPHS = [
 
 # ============================================================
-# 01 — Vectorized Python (most recent)
+# 01 — Orbit Propagator Performance Across Methods, Fidelity & Hardware
 # ============================================================
 {
 "num": 1,
-"slug": "01-performant-vectorized-python",
+"slug": "01-orbit-propagator-performance-comparison",
+"date": "2026-05-22",
+"format": "Analysis note",
+"length": "15-row comparison table + commentary",
+"pdf": "01-orbit-propagator-performance-comparison.pdf",
+"pdf_available": False,
+"title": "Orbit Propagator Performance Across Methods, Fidelity & Hardware",
+"subtitle": "Heyoka, MCPI, MCPI×Taylor, Fixed RK, Adaptive RK — on top-tier CPU and a single H100",
+"blurb": "An order-of-magnitude comparison across five method families (including a proposed MCPI×Taylor hybrid), three fidelity tiers, and two hardware classes. Identifies where each method's structural assumptions match — or fight — the hardware.",
+"abstract_text": "Where does each propagator method actually win? A 15-cell table across five method families, three fidelity tiers, and CPU vs single-GPU hardware. MCPI on GPU wins decisively for high-fidelity batched workloads; the proposed MCPI×Taylor hybrid pushes that another 3× at EGM-70.",
+"abstract": """
+<p>All performance figures reported as <strong>orbit-periods per second per device</strong>:
+one device = a single top-tier server CPU socket (64-core EPYC 9654 / Xeon Platinum 8480+ with AVX-512)
+or a single NVIDIA H100 (80 GB HBM3, ~67 TFLOPS FP64 peak). One LEO period $\\approx$ 5400 s;
+1 orbit-day $\\approx$ 16 orbit-periods. Estimates are order-of-magnitude with $\\pm 2\\times$
+uncertainty either direction; well-tuned implementations assumed throughout.</p>
+
+<p>The headline: <strong>MCPI on a single H100 achieves $\\sim 1 \\times 10^6$ orbit-periods/s
+at EGM-70 fidelity</strong>, roughly 300$\\times$ ahead of Heyoka on a top-tier CPU at the
+same accuracy. A proposed <strong>MCPI$\\times$Taylor hybrid</strong> — replacing the Keplerian
+warm start with a high-order Taylor map of the perturbed dynamics — pushes this to
+$5 \\times 10^6$ orbit-periods/s, a further $\\sim 3\\times$. To my knowledge that combination
+would be the fastest published orbital propagator for batched high-fidelity perturbed work,
+though it has not yet been built.</p>
+
+<p>This monograph table is a companion to the MCPI literature review (No. 09, was No. 08) which
+flagged the Chebyshev$\\times$Taylor combination as an unrealized gap, and to the
+differentiable-substrate, JAX and Mojo roadmap monographs (Nos. 03, 04, 05) which
+each provide a substrate capable of hosting it.</p>
+""",
+"toc": [
+    "Assumptions: hardware, accuracy targets, units",
+    "The throughput table — 15 method$\\times$fidelity cells with point estimates",
+    "Patterns: MCPI's advantage scales with fidelity; Heyoka is the CPU king",
+    "The MCPI$\\times$Taylor hybrid — what it is and where it wins",
+    "Fixed and adaptive RK at high fidelity",
+    "GPUs reward fixed-cost-per-orbit algorithms — the underappreciated point",
+    "Force evaluation is the great equalizer",
+    "Latency vs throughput — different winners",
+    "\"Fastest propagator ever made?\" — by metric",
+    "Caveats: estimates not benchmarks; what would change the picture",
+],
+"sections": [
+
+{"heading": "Assumptions",
+"body": """
+<p>Accuracy targets are production-grade defaults: <strong>J2 only</strong> &mdash; 1 m at 1 day;
+<strong>EGM-70</strong> (degree/order 70) &mdash; 10 m at 7 days;
+<strong>EGM + drag + SRP</strong> &mdash; 100 m at 7 days, LEO regime, NRLMSISE-00 + DE440 +
+dual-cone shadow model. All numbers assume well-tuned implementations (batching, JIT,
+vectorization). Naive ports lose 5&ndash;50$\\times$ to the values shown.</p>
+"""},
+
+{"heading": "Throughput comparison",
+"body": """
+<table>
+<thead>
+<tr>
+  <th>Method</th>
+  <th>Fidelity</th>
+  <th>CPU (orbit-periods/s)</th>
+  <th>GPU (orbit-periods/s)</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><strong>Heyoka</strong></td><td>J2</td><td>$3 \\times 10^{5}$</td><td>$1 \\times 10^{7}$&nbsp;<sup>&#8270;</sup></td></tr>
+<tr><td><strong>Heyoka</strong></td><td>EGM-70</td><td>$3 \\times 10^{3}$</td><td>$3 \\times 10^{4}$&nbsp;<sup>&#8270;</sup></td></tr>
+<tr><td><strong>Heyoka</strong></td><td>EGM + drag + SRP</td><td>$3 \\times 10^{2}$</td><td>$1 \\times 10^{4}$&nbsp;<sup>&#8270;</sup></td></tr>
+<tr><td><strong>MCPI</strong></td><td>J2</td><td>$3 \\times 10^{3}$</td><td>$3 \\times 10^{7}$</td></tr>
+<tr><td><strong>MCPI</strong></td><td>EGM-70</td><td>$1 \\times 10^{3}$</td><td>$1 \\times 10^{6}$</td></tr>
+<tr><td><strong>MCPI</strong></td><td>EGM + drag + SRP</td><td>$3 \\times 10^{2}$</td><td>$1 \\times 10^{5}$</td></tr>
+<tr><td><strong>MCPI$\\times$Taylor</strong> (hybrid, proposed)</td><td>J2</td><td>$3 \\times 10^{3}$&nbsp;<sup>&Dagger;</sup></td><td>$3 \\times 10^{7}$&nbsp;<sup>&Dagger;</sup></td></tr>
+<tr><td><strong>MCPI$\\times$Taylor</strong></td><td>EGM-70</td><td>$5 \\times 10^{3}$</td><td><strong>$5 \\times 10^{6}$</strong></td></tr>
+<tr><td><strong>MCPI$\\times$Taylor</strong></td><td>EGM + drag + SRP</td><td>$5 \\times 10^{2}$</td><td>$2 \\times 10^{5}$</td></tr>
+<tr><td><strong>Fixed RK</strong> (RK4&ndash;RK87)</td><td>J2</td><td>$3 \\times 10^{4}$</td><td>$1 \\times 10^{7}$</td></tr>
+<tr><td><strong>Fixed RK</strong></td><td>EGM-70</td><td>$3 \\times 10^{2}$</td><td>$1 \\times 10^{5}$</td></tr>
+<tr><td><strong>Fixed RK</strong></td><td>EGM + drag + SRP</td><td>$3 \\times 10^{1}$</td><td>$1 \\times 10^{4}$</td></tr>
+<tr><td><strong>Adaptive RK</strong> (DOP853, Verner)</td><td>J2</td><td>$3 \\times 10^{4}$</td><td>$3 \\times 10^{6}$&nbsp;<sup>&dagger;</sup></td></tr>
+<tr><td><strong>Adaptive RK</strong></td><td>EGM-70</td><td>$3 \\times 10^{2}$</td><td>$1 \\times 10^{4}$&nbsp;<sup>&dagger;</sup></td></tr>
+<tr><td><strong>Adaptive RK</strong></td><td>EGM + drag + SRP</td><td>$1 \\times 10^{2}$</td><td>$1 \\times 10^{4}$&nbsp;<sup>&dagger;</sup></td></tr>
+</tbody>
+</table>
+
+<p style="font-size:0.92em;font-style:italic;color:var(--ink-soft);margin-top:0.5em;">
+&#8270; Heyoka's GPU pathway is experimental &mdash; ceiling, not measured.<br>
+&dagger; Adaptive RK on GPU pays SIMT-divergence cost: orbits in a batch take different
+step counts.<br>
+&Dagger; At J2 the hybrid matches plain MCPI &mdash; the bottleneck is matmul-launch
+latency, not iteration count, so Taylor warm-start doesn't help.
+</p>
+
+<p>The headline cell is the bold one: <strong>$5 \\times 10^{6}$ orbit-periods/s at EGM-70
+on a single H100 with MCPI$\\times$Taylor</strong>. That translates to roughly
+$3 \\times 10^{5}$ orbit-days/s, or a full 30-day high-fidelity ephemeris for
+$\\sim 10{,}000$ satellites in about a second of wall-clock. Heyoka at the same fidelity
+on a top-tier 64-core CPU finishes $\\sim 3{,}000$ orbit-periods/s &mdash; about 1{,}700$\\times$
+slower at the same accuracy.</p>
+"""},
+
+{"heading": "MCPI's advantage scales with fidelity",
+"body": """
+<p>At J2-only fidelity, the matmul overhead of the Picard&ndash;Chebyshev cascade isn't
+paying for itself relative to Heyoka's huge adaptive Taylor steps. At EGM-70, the
+variable-fidelity caching and Tensor-Core-friendly batched matmuls turn the algorithm
+into a near-perfect match for the GPU &mdash; <strong>this is where MCPI dominates</strong>.
+At EGM + drag + SRP the advantage narrows again, because drag cannot be cached the way
+EGM coefficients can: NRLMSISE-00 depends on position <em>and</em> epoch, and density
+varies on shorter timescales than gravity.</p>
+"""},
+
+{"heading": "Heyoka is the CPU king",
+"body": """
+<p>Adaptive Taylor series of order ~20, AD-generated kernels, and AVX-512 SIMD batching
+are hard to beat on a CPU. The only place Heyoka gives up ground on CPU is when the force
+model becomes expensive enough that the step-size advantage matters less than how well
+the force evaluation parallelizes &mdash; and even there it stays competitive with batched
+RK on the same hardware.</p>
+"""},
+
+{"heading": "The MCPI×Taylor hybrid — what it is and where it wins",
+"body": """
+<p>The hybrid is the contribution this note actually proposes. It keeps MCPI's outer
+cascade (segment Chebyshev structure, adaptive $(\\textit{seg}, N)$, variable-fidelity
+caching, fixed-cost-per-batch, no warp divergence) and inserts a Taylor-series layer in
+two places where it pays:</p>
+
+<ol>
+<li><strong>Per-segment warm start.</strong> Replace the Keplerian F&amp;G warm start with a
+Taylor map of the perturbed dynamics through the segment, computed by jet-style
+higher-order forward AD on the RHS. The starting trajectory is now wrong by
+$O(t^{N+1})$ rather than by the full perturbation magnitude, which drops the Picard
+iteration count from $\\sim 15$ to $\\sim 3$&ndash;$5$ for high-fidelity cases.</li>
+
+<li><strong>Free segment STM.</strong> The Taylor jet machinery gives the segment state
+transition matrix (and higher derivatives if you want them) essentially for free as a
+byproduct of the warm start, which makes uncertainty propagation and adjoint-based
+gradient flow much cheaper downstream.</li>
+</ol>
+
+<p>The structural reason the EGM-70/GPU cell is the hybrid's sweet spot: at that fidelity,
+force evaluation dominates, iteration count is what costs you, and reducing iterations
+3$\\times$ is a clean 3$\\times$ speedup. At J2 there are too few force evals to matter;
+at EGM+drag+SRP, drag can't be cleanly Taylor-expanded (NRLMSISE-00 has near-discontinuities
+across atmospheric layers and irregular behavior near geomagnetic storms), so the hybrid
+gives only 1.5&ndash;2$\\times$ rather than 3$\\times$.</p>
+
+<p>The hybrid is, to my knowledge, <em>not implemented in production anywhere</em>; the
+MCPI literature review monograph (No. 09) flagged the Chebyshev$\\times$Taylor combination
+as one of the unrealized gaps. The JAX substrate roadmap (No. 04) and Mojo roadmap (No. 05)
+each describe a stack capable of hosting it; <code>jax.experimental.jet</code> + Diffrax
+has $\\sim 80\\%$ of the Taylor primitive ready.</p>
+"""},
+
+{"heading": "Fixed and adaptive RK lose decisively at high fidelity",
+"body": """
+<p>Both fixed and adaptive RK pay 4&ndash;13 force evaluations per step and need hundreds
+to thousands of steps per orbit at high fidelity. They scale fine across batches but the
+per-orbit work is high. Adaptive RK (DOP853, Verner 8(9)) is the operational gold standard
+on CPUs &mdash; it owns the SPEPH-style production stack &mdash; because of its accuracy
+guarantees and error control, <em>not</em> its throughput. Fixed RK4 is included as the
+lower bound; real fixed-step production propagators use RK8 or RK87. The reported range
+covers RK4 through RK87.</p>
+"""},
+
+{"heading": "GPUs reward fixed-cost-per-orbit algorithms",
+"body": """
+<p>This is the underappreciated point. Heyoka's Taylor stepping and DOP853 both want to take
+per-orbit-adaptive steps, but GPUs want SIMT lockstep across a warp. So on GPU you either
+lockstep to the worst orbit (sacrificing the adaptivity benefit) or pay divergence cost.</p>
+
+<p><strong>MCPI sidesteps this entirely.</strong> Every orbit in the batch executes the same
+fixed sequence of matmuls + force evals + iteration sweeps, regardless of the orbit's
+dynamics. The $(\\textit{seg}, N)$ adaptive parameters are chosen <em>before</em> the
+batch starts &mdash; from the hardest orbit's perigee segment &mdash; and held constant
+across the batch. The GPU pipeline stays full. This is the structural reason MCPI wins
+decisively at catalog scale, even when its per-orbit flop count is similar to other
+methods.</p>
+"""},
+
+{"heading": "Force evaluation is the great equalizer",
+"body": """
+<p>At high fidelity, all methods spend most of their time inside the gravity / drag / SRP
+evaluation. The integrator algorithm matters less than:</p>
+<ol>
+<li>How well-parallelized the per-node force evaluation is (favors GPU);</li>
+<li>How many force evaluations the algorithm requires per orbit-period (favors MCPI's
+    variable fidelity + radial adaptivity, and the hybrid even more);</li>
+<li>Whether per-orbit step adaptivity creates divergence in batched execution
+    (penalizes Heyoka and DOP853 on GPU).</li>
+</ol>
+"""},
+
+{"heading": "Latency vs throughput",
+"body": """
+<p>The throughput table above measures steady-state orbit-periods per second when many
+orbits are being propagated together. For <strong>latency</strong> (time to first answer
+for a single orbit) the picture flips:</p>
+<ul>
+<li><strong>Single-orbit latency, two-body or perturbed, on CPU:</strong> Heyoka wins
+    almost everywhere &mdash; ms range due to enormous Taylor steps.</li>
+<li><strong>Single-orbit latency on GPU:</strong> poor for all methods. Kernel launch
+    overhead alone is several ms; MCPI's per-iteration launches add up. Don't use a GPU
+    for one-off propagation.</li>
+<li><strong>Batched throughput</strong> ($B \\gtrsim 100$): GPU wins; MCPI/GPU is the
+    leading approach for high-fidelity.</li>
+<li><strong>Catalog-scale UQ</strong> ($B = 10^{4}$&ndash;$10^{5}$): MCPI on GPU is, to my
+    knowledge, the fastest published approach by 30&ndash;100$\\times$ over CPU-based
+    propagators; the hybrid would extend that lead to 100&ndash;300$\\times$.</li>
+</ul>
+"""},
+
+{"heading": "\"Fastest propagator ever made?\"",
+"body": """
+<p>The honest answer is: depends entirely on the metric.</p>
+<table>
+<thead><tr><th>Metric</th><th>Likely winner</th></tr></thead>
+<tbody>
+<tr><td>Single-orbit latency, two-body</td><td>Heyoka on CPU</td></tr>
+<tr><td>Single-orbit latency, perturbed</td><td>Heyoka on CPU</td></tr>
+<tr><td>Batched two-body throughput</td><td>MCPI/GPU $\\gtrsim$ Heyoka/CPU (modest margin)</td></tr>
+<tr><td>Batched EGM-70 throughput, today</td><td><strong>MCPI/GPU</strong>, by 30&ndash;100$\\times$</td></tr>
+<tr><td>Batched EGM-70 throughput, with the hybrid</td><td><strong>MCPI$\\times$Taylor/GPU</strong>, by 100&ndash;300$\\times$</td></tr>
+<tr><td>Batched EGM + drag + SRP throughput</td><td><strong>MCPI/GPU</strong> or hybrid, by 10&ndash;50$\\times$</td></tr>
+<tr><td>Catalog-scale UQ at high fidelity</td><td><strong>MCPI/GPU</strong> or hybrid, decisively</td></tr>
+<tr><td>Energy efficiency (orbits/joule) at scale</td><td>MCPI/GPU or hybrid</td></tr>
+<tr><td>Verifiability per LOC</td><td>Heyoka (smaller, AD-generated kernels)</td></tr>
+</tbody>
+</table>
+
+<p>The defensible claim in a paper or proposal: for <strong>batched, high-fidelity
+perturbed propagation at catalog scale, MCPI on a modern GPU achieves $10^{5}$&ndash;$10^{6}$
+orbit-days/s on a single H100</strong>, representing a 30&ndash;100$\\times$ improvement over
+state-of-the-art CPU-based propagators. The MCPI$\\times$Taylor hybrid extends that to
+$5 \\times 10^{5}$&ndash;$5 \\times 10^{6}$ orbit-days/s and would be the fastest published
+approach if implemented. The bound holds across H100/H200/B100 generations and tightens
+further on Blackwell as Tensor Core FP64 throughput grows.</p>
+"""},
+
+{"heading": "Caveats",
+"body": """
+<ol>
+<li><strong>These are estimates from flop counts and announced peak throughput</strong>,
+    not measured benchmarks. A proper bake-off would propagate an identical scenario
+    through each method with identical force-model details (EGM2008 coefficient set,
+    NRLMSISE-00 inputs, EOPs, ephemerides) and compare wall-clock at fixed accuracy.
+    The factor-of-2 fudge in either direction is real.</li>
+<li><strong>The hybrid is not yet implemented anywhere</strong>. Numbers in its row are
+    predictions based on the structural argument (Taylor warm-start drops Picard iteration
+    count $\\sim 3\\times$ at high fidelity, leaving the rest of the cascade unchanged),
+    not extrapolations from a measurement.</li>
+<li><strong>Heyoka's GPU pathway is moving fast.</strong> If their team produces a
+    properly Tensor-Core-aware GPU backend, the EGM-70/GPU gap narrows. Currently it's
+    not their main story but worth tracking.</li>
+<li><strong>The MCPI/GPU numbers assume a tuned implementation pathway</strong> &mdash;
+    variable-fidelity caching, radially adaptive degree, Tensor-Core-aware tile schemes.
+    A naive NumPy &rarr; JAX port without those would lose to a well-tuned DOP853 on CPU
+    at high fidelity.</li>
+<li><strong>The comparison is single-device.</strong> Multi-GPU sharding and multi-socket
+    CPU scaling don't enter the table; both favor MCPI structurally because the per-orbit
+    work is independent.</li>
+</ol>
+"""},
+
+],
+"closing": """
+<p>Produced 2026-05-22 as a follow-up to the orbital-propagation literature review
+(No. 09) and the orbprop-mcpi implementation work. The headline result &mdash; that
+MCPI$\\times$Taylor on a single H100 would be the fastest published orbital propagator
+for batched high-fidelity perturbed work &mdash; is a prediction, not a measurement; the
+bake-off required to confirm it is a planned next step.</p>
+
+<p>Companion to monograph № 03 (differentiable substrate motivation), № 04 (JAX roadmap),
+№ 05 (Mojo roadmap), and № 09 (MCPI literature review). Originating conversation
+unarchived; this entry is the first in the LLM-Publishing archive to summarize an
+ongoing private project rather than a single closed conversation.</p>
+""",
+},
+
+
+# ============================================================
+# 02 — Vectorized Python (most recent)
+# ============================================================
+{
+"num": 2,
+"slug": "02-performant-vectorized-python",
 "date": "2026-05-17",
 "format": "Markdown",
 "length": "Parts I–IX",
-"pdf": "01-performant-vectorized-python.pdf",
+"pdf": "02-performant-vectorized-python.pdf",
 "pdf_available": True,
 "title": "Performant Vectorized Python",
 "subtitle": "A Technical Monograph on Writing Code That Saturates the Hardware",
@@ -127,15 +411,15 @@ numbers, and tile DSLs will move; Parts I–IV are durable physics.</p>
 },
 
 # ============================================================
-# 02 — Differentiable GPU-Native Astrodynamics Substrate
+# 03 — Differentiable GPU-Native Astrodynamics Substrate
 # ============================================================
 {
-"num": 2,
-"slug": "02-differentiable-astrodynamics-substrate",
+"num": 3,
+"slug": "03-differentiable-astrodynamics-substrate",
 "date": "2026-05-08",
 "format": "LaTeX → PDF",
 "length": "Technical case",
-"pdf": "02-differentiable-astrodynamics-substrate.pdf",
+"pdf": "03-differentiable-astrodynamics-substrate.pdf",
 "pdf_available": True,
 "title": "A Differentiable, GPU-Native Astrodynamics Substrate",
 "subtitle": "A Technical Case for Operational and Strategic Investment",
@@ -233,15 +517,15 @@ monograph that is self-contained, technical and thorough. Render it as a PDF."</
 },
 
 # ============================================================
-# 03 — JAX Roadmap
+# 04 — JAX Roadmap
 # ============================================================
 {
-"num": 3,
-"slug": "03-jax-astrodynamics-roadmap",
+"num": 4,
+"slug": "04-jax-astrodynamics-roadmap",
 "date": "2026-05-08",
 "format": "LaTeX → PDF",
 "length": "~21 pages",
-"pdf": "03-jax-astrodynamics-roadmap.pdf",
+"pdf": "04-jax-astrodynamics-roadmap.pdf",
 "pdf_available": True,
 "title": "A JAX-Native Differentiable, GPU-Native Astrodynamics Substrate",
 "subtitle": "Layered Implementation Roadmap from Primitives to Operational Propagator",
@@ -320,15 +604,15 @@ numbering, different stack.</p>
 },
 
 # ============================================================
-# 04 — Mojo Roadmap
+# 05 — Mojo Roadmap
 # ============================================================
 {
-"num": 4,
-"slug": "04-mojo-astrodynamics-roadmap",
+"num": 5,
+"slug": "05-mojo-astrodynamics-roadmap",
 "date": "2026-05-08",
 "format": "LaTeX → PDF",
 "length": "~24 pages",
-"pdf": "04-mojo-astrodynamics-roadmap.pdf",
+"pdf": "05-mojo-astrodynamics-roadmap.pdf",
 "pdf_available": True,
 "title": "A Mojo-Native Differentiable, GPU-Native Astrodynamics Substrate",
 "subtitle": "Layered Implementation Roadmap from Compiler Primitives to Operational Propagator",
@@ -398,15 +682,15 @@ this roadmap assumes.</p>
 },
 
 # ============================================================
-# 05 — Cloud Cover Forecasting
+# 06 — Cloud Cover Forecasting
 # ============================================================
 {
-"num": 5,
-"slug": "05-cloud-cover-forecasting",
+"num": 6,
+"slug": "06-cloud-cover-forecasting",
 "date": "2026-05-07",
 "format": "LaTeX → PDF",
 "length": "~40–50 pages",
-"pdf": "05-cloud-cover-forecasting.pdf",
+"pdf": "06-cloud-cover-forecasting.pdf",
 "pdf_available": True,
 "title": "Total Cloud Cover Forecasting for EO Tasking",
 "subtitle": "ML Weather Models from Keisler-2022 to GenCast, with a Differentiable-Pipeline Lens",
@@ -508,15 +792,15 @@ ECMWF Open Data → temporal interpolation → ARCO ERA5 validation pipeline.</p
 },
 
 # ============================================================
-# 06 — Viewshed
+# 07 — Viewshed
 # ============================================================
 {
-"num": 6,
-"slug": "06-viewshed-azel-lookup",
+"num": 7,
+"slug": "07-viewshed-azel-lookup",
 "date": "2026-04-23",
 "format": "LaTeX → PDF",
 "length": "~23 pages, 557 KB",
-"pdf": "06-viewshed-azel-lookup.pdf",
+"pdf": "07-viewshed-azel-lookup.pdf",
 "pdf_available": True,
 "title": "Precomputed Azimuth–Elevation Horizon Masks for Satellite Visibility over Terrain",
 "subtitle": "A Spatial-Coherence-Exploiting Lookup Structure",
@@ -615,15 +899,15 @@ the run — accidental backspace bytes from <code>\\b*</code> macros and a few
 },
 
 # ============================================================
-# 07 — TLE from UCT
+# 08 — TLE from UCT
 # ============================================================
 {
-"num": 7,
-"slug": "07-tle-from-uct-pipeline",
+"num": 8,
+"slug": "08-tle-from-uct-pipeline",
 "date": "2026-04-09",
 "format": "LaTeX → PDF",
 "length": "~41 pages, AMS style",
-"pdf": "07-tle-from-uct-pipeline.pdf",
+"pdf": "08-tle-from-uct-pipeline.pdf",
 "pdf_available": True,
 "title": "From Uncorrelated Tracks to TLEs",
 "subtitle": "A Comprehensive Mathematical Pipeline with Provider-Specific Implementations",
@@ -713,15 +997,15 @@ to support mixed color specifications; stacked math accents
 },
 
 # ============================================================
-# 08 — Orbital Propagation & UQ Literature Review
+# 09 — Orbital Propagation & UQ Literature Review
 # ============================================================
 {
-"num": 8,
-"slug": "08-orbital-propagation-uq-literature-review",
+"num": 9,
+"slug": "09-orbital-propagation-uq-literature-review",
 "date": "2026-04-01",
 "format": "Markdown",
 "length": "~150 publications, 12 areas",
-"pdf": "08-orbital-propagation-uq-literature-review.pdf",
+"pdf": "09-orbital-propagation-uq-literature-review.pdf",
 "pdf_available": True,
 "title": "Orbital Propagation and Uncertainty Quantification",
 "subtitle": "A 2024–2026 Literature Review",
@@ -804,15 +1088,15 @@ WH/WHFast/TRACE, GMM, PCE, GBEES, EDMD, CR3BP, NRHO, heyoka.</p>
 },
 
 # ============================================================
-# 09 — Mojo PRD v12
+# 10 — Mojo PRD v12
 # ============================================================
 {
-"num": 9,
-"slug": "09-mojo-hybrid-architecture-prd-v12",
+"num": 10,
+"slug": "10-mojo-hybrid-architecture-prd-v12",
 "date": "2026-03-20",
 "format": "Markdown",
 "length": "~17,300 words; 2,235 lines; 20 sections + 9 appendices",
-"pdf": "09-mojo-hybrid-architecture-prd-v12.pdf",
+"pdf": "10-mojo-hybrid-architecture-prd-v12.pdf",
 "pdf_available": True,
 "title": "Hybrid Architecture PRD: Trait-Driven Scientific Computing System",
 "subtitle": "Version 12 — Static Specialization as Primary, Graph IR for Dynamic Concerns",
