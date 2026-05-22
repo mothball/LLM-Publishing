@@ -1,0 +1,47 @@
+# sda-pipeline
+# Project-level summary. ~200 tokens.
+# Covers the sensor-to-catalog pipeline work: EO measurements, UCT generation,
+# TLE production, viewshed geometry, weather-aware tasking.
+
+project_id: sda-pipeline
+title: Space domain awareness sensor-to-catalog pipeline
+status: each subcomponent has a monograph; integration into a single pipeline not yet attempted
+canonical_monographs:
+  - num: 6
+    slug: 06-cloud-cover-forecasting
+    role: total cloud cover prediction for EO tasking decisions
+  - num: 7
+    slug: 07-viewshed-azel-lookup
+    role: precomputed azimuth–elevation horizon masks for satellite viewshed geometry
+  - num: 8
+    slug: 08-tle-from-uct-pipeline
+    role: full EO telescope measurement → UCT → TLE math pipeline
+
+active_assumptions:
+  - electro-optical sensors as the primary modality
+  - WGS-84 ellipsoid; IAU 2006/2000A frame chain
+  - Laplace / Gauss-Herrick-Gibbs / double-r / Gooding for IOD
+  - admissible region (AR) and constrained AR (CAR) for too-short-arc cases
+  - magnitude as a parallel correlation channel (not in the geometric estimator)
+
+canonical_decisions:
+  - dual-cone shadow model for SRP (not cylindrical) to avoid discontinuities
+  - precomputed horizon masks rather than per-query ray tracing
+  - cloud cover treated as a tasking-decision input, not a measurement-quality filter
+
+blocking_gaps:
+  - end-to-end pipeline integration (sensor → UCT → correlation → TLE → catalog) not built
+  - multi-tracklet AR intersection for cross-sensor passes not implemented
+  - operational integration with existing SDA stacks (e.g. Unified Data Library) not designed
+
+next_steps:
+  - prototype the EO → UCT step as a standalone Python module
+  - benchmark IOD methods on synthetic and real tracklets
+
+key_references:
+  - Milani (2004), Tommei (2007), DeMars & Jah (2013) — admissible region
+  - Gooding (1996), Escobal — IOD methods
+  - Vallado — frame reductions
+  - NRLMSISE-00 — atmosphere (shared with orbprop-mcpi)
+
+last_updated: 2026-05-22

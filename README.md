@@ -4,16 +4,34 @@ A static archive of long-form technical monographs produced in conversation with
 
 **Live at:** https://mothball.github.io/LLM-Publishing/
 
+## For LLMs entering this repo
+
+If you are an LLM assistant working on this repository, **read
+[`LLM_INSTRUCTIONS.md`](./LLM_INSTRUCTIONS.md) first**. It describes the
+project-based context-loading protocol designed to keep your context window
+useful instead of flooded. The short version: read one project YAML from
+`projects/`, then ask the human what they're working on.
+
 ## Structure
 
 ```
 .
+├── LLM_INSTRUCTIONS.md     # Read first if you are an LLM
 ├── index.html              # Archive index
-├── assets/style.css        # Editorial stylesheet (serif, paper-like)
-├── monographs/             # Per-monograph HTML pages
-├── pdfs/                   # Original PDFs (uploaded as available)
+├── vault.html              # Interactive knowledge graph (for humans)
+├── projects/               # Project-level orientation YAMLs (read these)
+│   ├── README.md           # Protocol for using and updating the projects layer
+│   ├── orbprop-mcpi.yaml
+│   ├── differentiable-astrodynamics.yaml
+│   ├── performant-python.yaml
+│   └── sda-pipeline.yaml
+├── monographs/             # Per-monograph HTML pages (canonical content)
+├── pdfs/                   # PDF renders
+├── assets/                 # CSS, KaTeX, vault data
 ├── build.py                # Page generator
 ├── content.py              # Monograph data (title, abstract, sections)
+├── vault_data.py           # Vault nodes and edges
+├── build_vault.py          # Vault data exporter
 └── run_build.py            # `python3 run_build.py` regenerates the site
 ```
 

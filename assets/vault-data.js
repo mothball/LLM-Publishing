@@ -2,6 +2,34 @@
 const VAULT = {
   "nodes": [
     {
+      "id": "p.orbprop-mcpi",
+      "type": "project",
+      "label": "orbprop-mcpi",
+      "summary": "MCPI orbit propagator on GPU. Pre-implementation; spec v2 final, monograph and slides complete. Canonical: No. 1 and No. 9.",
+      "url": "projects/orbprop-mcpi.yaml"
+    },
+    {
+      "id": "p.diff-substrate",
+      "type": "project",
+      "label": "differentiable-astrodynamics",
+      "summary": "Differentiable, GPU-native astrodynamics substrate. Architectural case made; JAX-primary stack decided. Canonical: Nos. 3, 4, 5, 10.",
+      "url": "projects/differentiable-astrodynamics.yaml"
+    },
+    {
+      "id": "p.performant-python",
+      "type": "project",
+      "label": "performant-python",
+      "summary": "Performant vectorized Python for scientific computing. Reference document used by other projects' implementation tiers.",
+      "url": "projects/performant-python.yaml"
+    },
+    {
+      "id": "p.sda-pipeline",
+      "type": "project",
+      "label": "sda-pipeline",
+      "summary": "Sensor-to-catalog SDA pipeline. EO measurements, UCT/TLE generation, viewshed geometry, weather-aware tasking. Subcomponents have monographs; pipeline integration not yet attempted.",
+      "url": "projects/sda-pipeline.yaml"
+    },
+    {
       "id": "m01",
       "type": "monograph",
       "label": "\u2116 01 \u2014 Propagator perf comparison",
@@ -451,6 +479,56 @@ const VAULT = {
     }
   ],
   "edges": [
+    {
+      "source": "p.orbprop-mcpi",
+      "target": "m01",
+      "kind": "anchors"
+    },
+    {
+      "source": "p.orbprop-mcpi",
+      "target": "m09",
+      "kind": "anchors"
+    },
+    {
+      "source": "p.diff-substrate",
+      "target": "m03",
+      "kind": "anchors"
+    },
+    {
+      "source": "p.diff-substrate",
+      "target": "m04",
+      "kind": "anchors"
+    },
+    {
+      "source": "p.diff-substrate",
+      "target": "m05",
+      "kind": "anchors"
+    },
+    {
+      "source": "p.diff-substrate",
+      "target": "m10",
+      "kind": "anchors"
+    },
+    {
+      "source": "p.performant-python",
+      "target": "m02",
+      "kind": "anchors"
+    },
+    {
+      "source": "p.sda-pipeline",
+      "target": "m06",
+      "kind": "anchors"
+    },
+    {
+      "source": "p.sda-pipeline",
+      "target": "m07",
+      "kind": "anchors"
+    },
+    {
+      "source": "p.sda-pipeline",
+      "target": "m08",
+      "kind": "anchors"
+    },
     {
       "source": "m01",
       "target": "m03",

@@ -153,14 +153,13 @@
 
   <aside class="vault-sidebar" id="sidebar">
     <div class="detail-empty">
-      <p><strong>49 nodes, 64 edges.</strong></p>
-      <p>The vault expands the monograph archive into its underlying graph: the
-      ten monographs themselves, plus the concepts they develop, the tools they
-      depend on, the architectural decisions they record, the assumptions they
-      rest on, and the unrealized gaps they identify.</p>
-      <p>Click any node to see its summary and the connections that anchor it.
-      Concepts and tools are reused across monographs; the cross-citations between
-      monographs (already in the prose) show up as edges here.</p>
+      <p><strong>53 nodes, 74 edges.</strong></p>
+      <p>The vault expands the monograph archive into its underlying graph. The
+      black <em>project</em> nodes are the entry points &mdash; each one anchors
+      a coherent cluster of monographs, the concepts they develop, the tools
+      they depend on, the decisions they record, the assumptions they rest on,
+      and the unrealized gaps they identify.</p>
+      <p>Click any node to see its summary and the connections that anchor it.</p>
       <p style="border-top: 1px solid var(--rule); padding-top: 0.8rem; margin-top: 1rem;">
         <strong>Tip:</strong> the <em>gap</em> nodes (red) are the most useful entry
         points &mdash; they're the open problems still worth working on.
@@ -183,6 +182,7 @@
 // VAULT VISUALIZER
 // ============================================================================
 const TYPE_COLOR = {
+  project:    '#1a1410',  // ink black — visually highest-weight; these are entry points
   monograph:  '#8a2b1a',  // oxblood (accent)
   concept:    '#3b5b7a',  // muted blue
   tool:       '#5a6e3a',  // olive
@@ -192,12 +192,13 @@ const TYPE_COLOR = {
 };
 
 const TYPE_LABEL = {
+  project: 'project',
   monograph: 'monograph', concept: 'concept', tool: 'tool',
   decision: 'decision', assumption: 'assumption', gap: 'gap',
 };
 
 const TYPE_RADIUS = {
-  monograph: 11, concept: 7, tool: 7, decision: 8, assumption: 7, gap: 9,
+  project: 14, monograph: 11, concept: 7, tool: 7, decision: 8, assumption: 7, gap: 9,
 };
 
 const nodes = VAULT.nodes.map(n => Object.assign({}, n));
@@ -229,14 +230,21 @@ svg.call(d3.zoom()
 // Force simulation
 const sim = d3.forceSimulation(nodes)
   .force('link', d3.forceLink(edges).id(d => d.id).distance(d => {
-    // Monograph-to-monograph links shorter; concept↔monograph longer
     const sType = nodesById.get(typeof d.source === 'object' ? d.source.id : d.source)?.type;
     const tType = nodesById.get(typeof d.target === 'object' ? d.target.id : d.target)?.type;
+    // Project ↔ monograph anchors: short and stiff, so each project sits at the
+    // center of its cluster
+    if (sType === 'project' || tType === 'project') return 60;
     if (sType === 'monograph' && tType === 'monograph') return 90;
     if (sType === 'gap' || tType === 'gap') return 100;
     return 70;
-  }).strength(0.5))
-  .force('charge', d3.forceManyBody().strength(-260))
+  }).strength(d => {
+    const sType = nodesById.get(typeof d.source === 'object' ? d.source.id : d.source)?.type;
+    const tType = nodesById.get(typeof d.target === 'object' ? d.target.id : d.target)?.type;
+    if (sType === 'project' || tType === 'project') return 0.9;
+    return 0.5;
+  }))
+  .force('charge', d3.forceManyBody().strength(d => d.type === 'project' ? -700 : -260))
   .force('center', d3.forceCenter(0, 0))
   .force('collide', d3.forceCollide(d => TYPE_RADIUS[d.type] + 8));
 
@@ -272,6 +280,7 @@ node.append('text')
   .attr('text-anchor', 'middle')
   .attr('dy', d => TYPE_RADIUS[d.type] + 11)
   .text(d => {
+    if (d.type === 'project') return d.label;
     if (d.type === 'monograph') return d.label.replace(/^№ /, '№').replace(/ — .*$/, '');
     if (d.type === 'gap') return d.label;
     if (d.type === 'concept') return d.label.length > 24 ? d.label.slice(0, 22) + '…' : d.label;
@@ -339,11 +348,12 @@ function renderSidebar(d) {
   if (!d) {
     sb.innerHTML = `
       <div class="detail-empty">
-        <p><strong>49 nodes, 64 edges.</strong></p>
-        <p>The vault expands the monograph archive into its underlying graph: the
-        ten monographs themselves, plus the concepts they develop, the tools they
-        depend on, the architectural decisions they record, the assumptions they
-        rest on, and the unrealized gaps they identify.</p>
+        <p><strong>53 nodes, 74 edges.</strong></p>
+        <p>The vault expands the monograph archive into its underlying graph. The
+        black <em>project</em> nodes are the entry points — each one anchors a
+        coherent cluster of monographs, the concepts they develop, the tools
+        they depend on, the decisions they record, the assumptions they rest on,
+        and the unrealized gaps they identify.</p>
         <p>Click any node to see its summary and the connections that anchor it.</p>
         <p style="border-top: 1px solid var(--rule); padding-top: 0.8rem; margin-top: 1rem;">
           <strong>Tip:</strong> the <em>gap</em> nodes (red) are the most useful entry
@@ -366,7 +376,7 @@ function renderSidebar(d) {
   });
 
   const urlBtn = d.url
-    ? `<a class="detail-url-btn" href="${d.url}">Read full monograph &rarr;</a>` : '';
+    ? `<a class="detail-url-btn" href="${d.url}">${d.type === 'project' ? 'View project YAML' : (d.type === 'monograph' ? 'Read full monograph' : 'Open')} &rarr;</a>` : '';
 
   sb.innerHTML = `
     <div class="detail-eyebrow">${TYPE_LABEL[d.type]}${d.date ? ' · ' + d.date : ''}</div>
@@ -383,7 +393,7 @@ function renderSidebar(d) {
 
 // Legend with type-toggle filters
 const legendEl = document.getElementById('legend');
-const typeOrder = ['monograph', 'concept', 'tool', 'decision', 'assumption', 'gap'];
+const typeOrder = ['project', 'monograph', 'concept', 'tool', 'decision', 'assumption', 'gap'];
 const enabledTypes = new Set(typeOrder);
 
 typeOrder.forEach(t => {

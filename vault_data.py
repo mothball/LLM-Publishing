@@ -12,6 +12,23 @@ This file is the single source of truth; the visualizer page reads from it via J
 
 NODES = [
 
+    # ---------- PROJECTS ----------
+    # Project nodes are the entry points: each one is a coherent cluster of
+    # monographs, concepts, decisions, and gaps. Loading exactly one of these
+    # at session start is the recommended pattern; see projects/README.md.
+    {"id": "p.orbprop-mcpi", "type": "project", "label": "orbprop-mcpi",
+     "summary": "MCPI orbit propagator on GPU. Pre-implementation; spec v2 final, monograph and slides complete. Canonical: No. 1 and No. 9.",
+     "url": "projects/orbprop-mcpi.yaml"},
+    {"id": "p.diff-substrate", "type": "project", "label": "differentiable-astrodynamics",
+     "summary": "Differentiable, GPU-native astrodynamics substrate. Architectural case made; JAX-primary stack decided. Canonical: Nos. 3, 4, 5, 10.",
+     "url": "projects/differentiable-astrodynamics.yaml"},
+    {"id": "p.performant-python", "type": "project", "label": "performant-python",
+     "summary": "Performant vectorized Python for scientific computing. Reference document used by other projects' implementation tiers.",
+     "url": "projects/performant-python.yaml"},
+    {"id": "p.sda-pipeline", "type": "project", "label": "sda-pipeline",
+     "summary": "Sensor-to-catalog SDA pipeline. EO measurements, UCT/TLE generation, viewshed geometry, weather-aware tasking. Subcomponents have monographs; pipeline integration not yet attempted.",
+     "url": "projects/sda-pipeline.yaml"},
+
     # ---------- MONOGRAPHS ----------
     {"id": "m01", "type": "monograph", "label": "№ 01 — Propagator perf comparison",
      "summary": "15-cell table comparing Heyoka, MCPI, MCPI×Taylor, Fixed RK, Adaptive RK across J2/EGM-70/EGM+drag+SRP and CPU/GPU.",
@@ -175,6 +192,18 @@ NODES = [
 
 
 EDGES = [
+    # Project → canonical monographs (these edges define the project clusters)
+    {"source": "p.orbprop-mcpi", "target": "m01", "kind": "anchors"},
+    {"source": "p.orbprop-mcpi", "target": "m09", "kind": "anchors"},
+    {"source": "p.diff-substrate", "target": "m03", "kind": "anchors"},
+    {"source": "p.diff-substrate", "target": "m04", "kind": "anchors"},
+    {"source": "p.diff-substrate", "target": "m05", "kind": "anchors"},
+    {"source": "p.diff-substrate", "target": "m10", "kind": "anchors"},
+    {"source": "p.performant-python", "target": "m02", "kind": "anchors"},
+    {"source": "p.sda-pipeline", "target": "m06", "kind": "anchors"},
+    {"source": "p.sda-pipeline", "target": "m07", "kind": "anchors"},
+    {"source": "p.sda-pipeline", "target": "m08", "kind": "anchors"},
+
     # Monograph cross-references (the literal "Companion to No. XX" mentions)
     {"source": "m01", "target": "m03", "kind": "cites"},
     {"source": "m01", "target": "m04", "kind": "cites"},

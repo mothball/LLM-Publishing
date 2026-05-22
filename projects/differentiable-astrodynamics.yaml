@@ -1,0 +1,47 @@
+# differentiable-astrodynamics
+# Project-level summary. ~200 tokens.
+
+project_id: differentiable-astrodynamics
+title: Differentiable, GPU-native astrodynamics substrate
+status: architectural case made; substrate choice (JAX vs Mojo) settled; implementation pending
+canonical_monographs:
+  - num: 3
+    slug: 03-differentiable-astrodynamics-substrate
+    role: operational and strategic case
+  - num: 4
+    slug: 04-jax-astrodynamics-roadmap
+    role: JAX-stack implementation roadmap (primary path)
+  - num: 5
+    slug: 05-mojo-astrodynamics-roadmap
+    role: Mojo-stack roadmap (optimization tier)
+  - num: 10
+    slug: 10-mojo-hybrid-architecture-prd-v12
+    role: trait-driven scientific computing PRD; substrate spec
+
+active_assumptions:
+  - SPEPH's RK7(8)/RK8(9) on CPU is the operational ceiling to break
+  - end-to-end differentiability is the architectural goal, not just local AD
+  - GPU-native batching is required for catalog-scale workloads
+  - target audience is operational SDA and satellite fleet management
+
+canonical_decisions:
+  - JAX-primary stack with Mojo/cuTile/CUDA-C++ as optional optimization layer
+  - HasCustomAdjoint trait for non-AD-friendly operations (DiGeo-style)
+  - LEAN 4 as the formal spec layer above PRD, below implementation
+  - sensitivity-analysis crossover point defines reverse-mode vs continuous-adjoint boundary
+
+blocking_gaps:
+  - no implementation yet; spec is complete through v12
+  - Taylor Map Diffusion vs Monte Carlo Pc bake-off not yet run
+  - GA-vs-AD-gradient comparison on RPO trajectory design not yet run
+  - downstream operational integration story not yet articulated
+
+next_steps:
+  - pick one demo benchmark (Taylor Map Diffusion vs MC, or GA-vs-AD on RPO) and run it
+  - build the JAX reference layer first; profile; optimize hot kernels in Mojo only where needed
+
+key_references:
+  - SPEPH (U.S. Space Force) — the architectural reference being displaced
+  - DifferentialEquations.jl, JAX/XLA, Diffrax, Enzyme, DiGeo, TaylorIntegration.jl, Mathlib4
+
+last_updated: 2026-05-22

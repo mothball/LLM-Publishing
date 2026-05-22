@@ -1,0 +1,38 @@
+# performant-python
+# Project-level summary. ~200 tokens.
+
+project_id: performant-python
+title: Performant vectorized Python for scientific computing
+status: monograph complete; serves as reference for other projects' implementation tiers
+canonical_monographs:
+  - num: 2
+    slug: 02-performant-vectorized-python
+    role: technical monograph on writing code that saturates the hardware
+
+active_assumptions:
+  - target: CPython 3.13/3.14 + NumPy 2.x
+  - thesis: performance work is memory work
+  - vectorized code is fast for two distinct reasons (interpreter avoidance, SIMD feed) with different failure modes
+
+canonical_decisions:
+  - ArrayLike + asarray at API boundaries
+  - dtype pinning explicit at boundaries
+  - SoA layout when SIMD inner loops dominate; AoS acceptable otherwise
+  - operate along the last axis (contiguous axis preferred for ufuncs)
+  - Numba CPU as reference/validation tier; not the production tier
+
+blocking_gaps:
+  - none specific to this monograph; it's a settled reference document
+  - free-threading (PEP 703) maturity is an external dependency to track
+
+next_steps:
+  - no active next steps; consult when other projects need vectorization guidance
+
+key_references:
+  - Drepper, "What Every Programmer Should Know About Memory"
+  - Hennessy & Patterson, Roofline model
+  - Agner Fog optimization manuals
+  - NumPy NEP 38 / NEP 54 (Google Highway SIMD dispatch)
+  - Gorelick & Ozsvald, "High Performance Python"
+
+last_updated: 2026-05-22

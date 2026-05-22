@@ -1,0 +1,44 @@
+# orbprop-mcpi
+# Project-level summary. ~200 tokens. Designed to be loaded by an LLM at the
+# start of any session about this project. Update when reality changes.
+
+project_id: orbprop-mcpi
+title: Modified Chebyshev–Picard Iteration orbit propagator on GPU
+status: pre-implementation; spec v2 final, monograph and slides complete
+canonical_monographs:
+  - num: 1
+    slug: 01-orbit-propagator-performance-comparison
+    role: performance comparison table and MCPI×Taylor hybrid proposal
+  - num: 9
+    slug: 09-orbital-propagation-uq-literature-review
+    role: literature review and unrealized-gap identification
+
+active_assumptions:
+  - single H100 reference; no multi-GPU sharding in scope
+  - production accuracy targets: J2 → 1m at 1 day, EGM-70 → 10m at 7 days, EGM+drag+SRP → 100m at 7 days
+  - LEO regime throughout
+  - drag is uncacheable in MCPI (NRLMSISE-00 depends on position AND epoch)
+  - cascade form is canonical; never compound into a single matrix
+
+canonical_decisions:
+  - JAX as primary stack; Mojo/cuTile as optional optimization tier for profiled hot kernels
+  - three-tier verification: operator self-tests, Woollands C++ byte-equivalence (1e-12), GPS SP3
+  - pursue MCPI×Taylor hybrid as the publishable contribution
+
+blocking_gaps:
+  - MCPI×Taylor hybrid not implemented; the headline performance number is a structural prediction
+  - no real cross-method bake-off yet; current table is order-of-magnitude estimates from flop counts
+  - hot-start logic disabled in Woollands reference for unclear reasons (possibly perigee re-osculation conflict)
+
+next_steps:
+  - implement MCPI/GPU reference in JAX
+  - verify byte-equivalence to Woollands C++ at 1e-12
+  - then build the Taylor warm-start layer
+
+key_references:
+  - Junkins & Woollands (2019), adaptive Picard–Chebyshev
+  - Macomber et al. (2016), variable-fidelity gravity
+  - Probe et al. (2015), radially adaptive degree
+  - Bai & Junkins (2011), original MCPI
+
+last_updated: 2026-05-22
